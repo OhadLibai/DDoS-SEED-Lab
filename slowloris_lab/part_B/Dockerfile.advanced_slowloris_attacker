@@ -1,0 +1,4 @@
+# Dockerfile.attacker for the slowloris lab
+FROM python:3.9-slim
+WORKDIR /app
+COPY advanced_slowloris_attack.py .

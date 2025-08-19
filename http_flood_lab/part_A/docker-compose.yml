@@ -1,0 +1,33 @@
+# http_flood_lab/docker-compose.part_A.yml
+name: http-flood-lab-a
+
+services:
+  victim:
+    build:
+      context: ..
+      dockerfile: part_A/Dockerfile.victim_single
+    container_name: dev-victim-server
+    ports:
+      - "8080:80"
+    networks:
+      - attack-net
+    environment:
+    # the higher the number - the busiest the server to handle one response
+      - DIFFICULITY=5
+
+  attacker:
+    build:
+      context: ..
+      dockerfile: Dockerfile.flood_attcker
+    container_name: flood-attacker-client-A
+    environment:
+      - PYTHONUNBUFFERED=1
+    # Command now specifies the victim by its service name
+    command: python http_flood.py http://victim 32
+    networks:
+      - attack-net
+    depends_on:
+      - victim
+
+networks:
+  attack-net:

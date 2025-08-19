@@ -1,0 +1,33 @@
+# docker-compose for slowloris part B
+name: slowloris-lab-B
+
+services:
+  victim:
+    image: httpd:latest
+    container_name: loris-victim-apache-latest
+    ports:
+      - "8080:80"
+    networks:
+      - attack-net
+
+  attacker:
+    build:
+      context: .
+      dockerfile: Dockerfile.advanced_slowloris_attacker
+    container_name: adv-loris-attacker-client
+    environment:
+      - PYTHONUNBUFFERED=1
+    # Command for the new script with more connections and bigger headers
+    command: >
+      python advanced_slowloris_attack.py 
+      victim 
+      2048 
+      --header-size 512 
+      --sleep 15
+    networks:
+      - attack-net
+    depends_on:
+      - victim
+
+networks:
+  attack-net:
