@@ -134,31 +134,11 @@ Comprehensive monitoring guides are provided to facilitate detailed performance 
 
 ## Educational Integration
 
-### SEED Lab Ecosystem
-These DDoS labs complement other SEED project laboratories:
-- **Network Security Labs** - Building foundational networking knowledge
-- **Web Security Labs** - Understanding web application vulnerabilities  
-- **System Security Labs** - Exploring operating system security mechanisms
-- **Cryptography Labs** - Learning security protocols and encryption
-
 ### Pedagogical Approach
 - **Experiential Learning** - Direct hands-on experience with attack techniques
 - **Controlled Environment** - Safe, isolated laboratory settings
 - **Comparative Analysis** - Understanding trade-offs and performance characteristics
 - **Defensive Perspective** - Emphasis on understanding attacks to build better defenses
-
-## Safety and Ethics
-
-### Laboratory Environment
-- All exercises are designed for **controlled educational environments only**
-- Use isolated networks and dedicated laboratory systems
-- Never deploy against systems you do not own or have explicit permission to test
-
-### Educational Purpose
-- Focus on **defensive cybersecurity** education
-- Understanding attack vectors to build better defenses
-- Responsible disclosure and ethical security practices
-- Compliance with institutional policies and local laws
 
 ## Support and Resources
 
@@ -170,16 +150,3 @@ These DDoS labs complement other SEED project laboratories:
 ### SEED Project Resources
 - [SEED Project Website](https://seedsecuritylabs.org/) - Additional security labs and resources
 - [SEED Lab Manual](https://github.com/seed-labs/seed-labs) - Comprehensive lab collection
-- Community forums and educational support materials
-
-## Contributing
-
-This project follows SEED project principles of open educational resources. Improvements, bug fixes, and educational enhancements are welcome through standard GitHub contribution workflows.
-
-## License
-
-This project is released under educational use licenses consistent with the SEED project framework, promoting open access to cybersecurity education resources.
-
----
-
-**Note**: These laboratories are designed for educational purposes within controlled environments. Always follow responsible disclosure practices and ethical guidelines when working with security-related technologies.
