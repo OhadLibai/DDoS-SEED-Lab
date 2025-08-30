@@ -20,34 +20,34 @@ echo "GCP target: $TARGET_URL"
 ### HTTP Flood Lab
 ```bash
 # One-line monitoring setup
-watch -n 1 'curl -o /dev/null -s -w "%{time_total}s\n" $TARGET_URL' &
+watch -n 1 'curl --http2-prior-knowledge -o /dev/null -s -w "%{time_total}s\n" $TARGET_URL' &
 watch -n 1 'docker stats --no-stream' &
 watch -n 2 'ss -tan | grep :8080 | wc -l' &
 
 # Performance test
-curl -o /dev/null -s -w "Total:%{time_total}s|Connect:%{time_connect}s|TTFB:%{time_starttransfer}s|HTTP:%{http_code}\n" $TARGET_URL
+curl --http2-prior-knowledge -o /dev/null -s -w "Total:%{time_total}s|Connect:%{time_connect}s|TTFB:%{time_starttransfer}s|HTTP:%{http_code}\n" $TARGET_URL
 ```
 
 ### Slowloris Lab
 ```bash
 # Connection monitoring
 watch -n 2 'ss -tan | grep :8080 | awk "{print \$1}" | sort | uniq -c' &
-watch -n 3 'curl -s $TARGET_URL/server-status?auto | grep -E "(BusyWorkers|IdleWorkers)"' &
+watch -n 3 'curl --http2-prior-knowledge -s $TARGET_URL/health | grep -E "(status|workers)"' &
 
 # Impact testing
-timeout 10 curl -s -o /dev/null -w "Response: %{time_total}s\n" $TARGET_URL
+timeout 10 curl --http2-prior-knowledge -s -o /dev/null -w "Response: %{time_total}s\n" $TARGET_URL
 ```
 
 ## Key Metrics Summary
 
 | Lab | Metric | Normal Value | Under Attack | Command |
 |-----|--------|-------------|--------------|---------|
-| HTTP Flood | Response Time | 0.01-0.05s | 3-30s+ | `curl -w "%{time_total}s"` |
-| HTTP Flood | CPU Usage | <20% | 80-100% | `docker stats` |
-| HTTP Flood | Success Rate | 100% | 10-30% | Success/failure counting |
-| Slowloris | Active Connections | <10 | 50-200+ | `ss -tan \| grep :8080 \| wc -l` |
-| Slowloris | Apache Workers | Mostly idle | All busy | `curl server-status` |
-| Slowloris | New Connections | Immediate | Refused/timeout | Connection testing |
+| HTTP/2 Flood | Response Time | 0.01-0.05s | 3-30s+ | `curl --http2-prior-knowledge -w "%{time_total}s"` |
+| HTTP/2 Flood | CPU Usage | <20% | 80-100% | `docker stats` |
+| HTTP/2 Flood | Success Rate | 100% | 10-30% | Success/failure counting |
+| HTTP/2 Slowloris | Active Connections | <10 | 50-200+ | `ss -tan \| grep :8080 \| wc -l` |
+| HTTP/2 Slowloris | Server Workers | Mostly idle | All busy | `curl --http2-prior-knowledge server/health` |
+| HTTP/2 Slowloris | New Connections | Immediate | Refused/timeout | Connection testing |
 
 ## GCP Monitoring Commands
 ```bash
@@ -72,7 +72,7 @@ echo "Current environment: $ENV_TYPE"
 ### Data Collection with Environment Labels
 ```bash
 # Baseline collection
-curl -o /dev/null -s -w "$ENV_TYPE Baseline: %{time_total}s\n" $TARGET_URL
+curl --http2-prior-knowledge -o /dev/null -s -w "$ENV_TYPE Baseline: %{time_total}s\n" $TARGET_URL
 
 # Attack impact logging
 echo "$(date): $ENV_TYPE attack impact test" >> attack_comparison.log

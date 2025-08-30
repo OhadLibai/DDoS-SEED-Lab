@@ -1,0 +1,32 @@
+# Part A: Single-Worker HTTP/2 Attack Lab
+name: http2-flood-lab-part-a
+
+services:
+  victim:
+    build:
+      context: ..
+      dockerfile: part-A/Dockerfile.victim
+    container_name: http2-victim-single
+    ports:
+      - "8080:80"
+    networks:
+      - attack-net
+    environment:
+      - DIFFICULITY=${DIFFICULITY:-5}
+      - SCENARIO=${SCENARIO:-proof_of_work}
+
+  attacker:
+    build:
+      context: ..
+      dockerfile: Dockerfile.attacker
+    container_name: http2-attacker-basic
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: python http_flood.py http://victim:80 64
+    networks:
+      - attack-net
+    depends_on:
+      - victim
+
+networks:
+  attack-net:

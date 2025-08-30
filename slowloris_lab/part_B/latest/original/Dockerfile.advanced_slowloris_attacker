@@ -1,0 +1,5 @@
+# Dockerfile.attacker for the slowloris lab - HTTP/2 Advanced Version
+FROM python:3.9-slim
+WORKDIR /app
+COPY advanced_slowloris.py .
+RUN pip install httpx[http2] h2

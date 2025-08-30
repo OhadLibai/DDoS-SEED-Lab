@@ -1,0 +1,86 @@
+# Docker Compose for CVE-2023-43622 Slowloris Attack Demonstration
+# This configuration deploys Apache httpd 2.4.55 (vulnerable) and the specialized attack script
+name: cve-2023-43622-slowloris-lab
+
+services:
+  # Vulnerable Apache httpd 2.4.55 server
+  victim:
+    build:
+      context: .
+      dockerfile: Dockerfile.cve_2023_43622_victim
+    container_name: cve-2023-43622-victim-apache
+    ports:
+      - "8080:80"  # HTTP/2 cleartext on port 8080
+    networks:
+      - cve-attack-net
+    environment:
+      - APACHE_LOG_LEVEL=info
+    volumes:
+      - /dev/shm:/dev/shm  # Shared memory for monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # CVE-2023-43622 specialized attack container
+  cve-attacker:
+    build:
+      context: .
+      dockerfile: Dockerfile.cve_2023_43622_attacker
+    container_name: cve-2023-43622-attacker
+    environment:
+      - PYTHONUNBUFFERED=1
+    # Use the CVE-2023-43622 specific attack script
+    command: >
+      python cve_2023_43622_simple.py 
+      victim 
+      --port 80
+      --connections 50
+      --auto
+    networks:
+      - cve-attack-net
+    depends_on:
+      victim:
+        condition: service_healthy
+    volumes:
+      - /proc:/host_proc:ro  # Read-only access to host proc for monitoring
+
+  # Monitoring container to observe the attack impact
+  monitor:
+    image: alpine:latest
+    container_name: cve-2023-43622-monitor
+    networks:
+      - cve-attack-net
+    depends_on:
+      - victim
+    command: >
+      sh -c "
+      apk add --no-cache curl &&
+      echo 'CVE-2023-43622 Attack Monitor Starting...' &&
+      echo 'Monitoring Apache httpd 2.4.55 for vulnerability impact' &&
+      while true; do
+        echo '=== CVE-2023-43622 Monitor $(date) ===' &&
+        echo 'Testing server responsiveness...' &&
+        timeout 10 curl -w 'Response Time: %{time_total}s | HTTP Code: %{http_code}\n' -o /dev/null -s http://victim/health.html || echo 'SERVER NOT RESPONDING - CVE-2023-43622 DoS ACHIEVED!' &&
+        echo 'Testing HTTP/2 capability...' &&
+        timeout 5 curl --http2-prior-knowledge -w 'HTTP/2 Response: %{time_total}s\n' -o /dev/null -s http://victim/ || echo 'HTTP/2 FAILED - CVE-2023-43622 impact detected!' &&
+        echo 'Server status check...' &&
+        timeout 5 curl -s http://victim/server-status?auto || echo 'Status page unreachable' &&
+        echo '=================================' &&
+        sleep 30
+      done
+      "
+    restart: unless-stopped
+
+networks:
+  cve-attack-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  apache_logs:
+    driver: local

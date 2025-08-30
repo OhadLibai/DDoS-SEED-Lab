@@ -1,0 +1,41 @@
+services:
+  # Apache HTTP Server 2.4.55 - Optimized for Zero Window Attack
+  apache-victim:
+    image: httpd:2.4.55
+    container_name: apache-zero-window-victim
+    ports:
+      - "80:80"
+    volumes:
+      - ../../shared/docker/apache-html/html:/usr/local/apache2/htdocs
+    command: >
+      sh -c "sed -i 's/#LoadModule http2_module/LoadModule http2_module/' /usr/local/apache2/conf/httpd.conf &&
+             grep -q 'Protocols h2 h2c http/1.1' /usr/local/apache2/conf/httpd.conf || echo 'Protocols h2 h2c http/1.1' >> /usr/local/apache2/conf/httpd.conf &&
+             httpd-foreground"
+    networks:
+      - zero-window-lab
+    restart: unless-stopped
+    labels:
+      - "lab.attack=zero-window"
+      - "lab.apache.version=2.4.55"
+
+  # Attacker container
+  attacker:
+    build: 
+      context: ../../shared/docker
+      dockerfile: Dockerfile.attacker
+    container_name: zero-window-attacker
+    volumes:
+      - ../../shared:/workspace/shared
+      - ./logs:/tmp/logs
+    networks:
+      - zero-window-lab
+    depends_on:
+      - apache-victim
+    environment:
+      - PYTHONUNBUFFERED=1
+    stdin_open: true
+    tty: true
+
+networks:
+  zero-window-lab:
+    driver: bridge

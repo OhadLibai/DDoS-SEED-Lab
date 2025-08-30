@@ -1,34 +1,35 @@
-# Slowloris Attack Lab
+# HTTP/2 Slowloris Attack Lab
 
 ## Overview
 
-The Slowloris Attack Lab demonstrates connection exhaustion Distributed Denial of Service (DDoS) attacks that consume server resources through slow, persistent HTTP connections. This lab explores stealth attack techniques that achieve maximum impact with minimal bandwidth usage, providing hands-on experience with sophisticated connection-based attacks.
+The HTTP/2 Slowloris Attack Lab demonstrates advanced stream exhaustion Distributed Denial of Service (DDoS) attacks that exploit HTTP/2 multiplexing to overwhelm servers through slow, persistent streams. This lab explores stealth attack techniques that achieve maximum impact with minimal bandwidth usage, providing hands-on experience with sophisticated HTTP/2 stream-based attacks.
 
 ## Attack Mechanism
 
-**Slowloris attacks** work by opening multiple connections to a web server and keeping them alive as long as possible by sending partial HTTP requests. This technique exhausts the server's connection pool without requiring high bandwidth, making it particularly effective against many web servers.
+**HTTP/2 Slowloris attacks** work by opening multiple HTTP/2 connections to a web server and creating numerous slow streams within each connection, keeping them alive as long as possible by sending partial HTTP/2 frames. This technique exhausts the server's stream pools and connection resources without requiring high bandwidth, making it particularly effective against HTTP/2 servers.
 
 ### Key Characteristics:
 - **Low Bandwidth**: Requires minimal network resources from attacker
-- **Connection Exhaustion**: Fills server connection pools with incomplete requests
-- **Stealth Operation**: Difficult to detect due to low traffic volume
-- **High Impact**: Can effectively DoS servers with limited attacker resources
+- **Stream Exhaustion**: Fills server HTTP/2 stream pools with incomplete requests
+- **Multiplexing Abuse**: Exploits HTTP/2's multiplexing feature for efficiency
+- **Stealth Operation**: Difficult to detect due to low traffic volume and legitimate HTTP/2 appearance
+- **High Impact**: Can effectively DoS HTTP/2 servers with limited attacker resources
 
 ## Lab Structure
 
-### Part A: Basic Slowloris Attack
-- **Target**: Apache web server with standard configuration
-- **Attack Method**: Simple slow HTTP request transmission
-- **Attack Intensity**: 1024 concurrent connections
-- **Expected Behavior**: Gradual connection pool exhaustion
-- **Learning Focus**: Understanding basic connection exhaustion principles
+### Part A: Basic HTTP/2 Slowloris Attack
+- **Target**: Quart HTTP/2 server with single-worker configuration
+- **Attack Method**: Simple slow HTTP/2 stream transmission with partial frames
+- **Attack Intensity**: 256 concurrent connections with 10 streams each
+- **Expected Behavior**: Gradual HTTP/2 stream pool exhaustion
+- **Learning Focus**: Understanding basic HTTP/2 stream exhaustion principles
 
-### Part B: Advanced Adaptive Slowloris
-- **Target**: Apache web server (same as Part A)
-- **Attack Method**: Intelligent adaptive attack with evasion techniques
-- **Attack Intensity**: 1024 concurrent connections with dynamic adjustment
-- **Expected Behavior**: More resilient attack with adaptive pacing
-- **Learning Focus**: Advanced attack techniques and detection evasion
+### Part B: Advanced Adaptive HTTP/2 Slowloris
+- **Target**: Multi-worker Quart HTTP/2 server
+- **Attack Method**: Intelligent adaptive HTTP/2 attack with stealth features and evasion techniques
+- **Attack Intensity**: 100 concurrent connections with 25 streams each, adaptive adjustment
+- **Expected Behavior**: More resilient attack with adaptive pacing and stealth features
+- **Learning Focus**: Advanced HTTP/2 attack techniques and detection evasion
 
 ## Prerequisites
 
@@ -39,9 +40,9 @@ The Slowloris Attack Lab demonstrates connection exhaustion Distributed Denial o
 - Google Cloud Platform account (for cloud deployment)
 
 ### Knowledge Prerequisites
-- Understanding of HTTP protocol and TCP connections
-- Basic web server architecture concepts
-- Familiarity with connection handling and timeouts
+- Understanding of HTTP/1.1 and HTTP/2 protocols
+- Basic web server architecture concepts (async processing, multiplexing)
+- Familiarity with HTTP/2 stream handling and connection management
 - Elementary network monitoring knowledge
 
 ## Quick Start Guide
@@ -53,8 +54,8 @@ The Slowloris Attack Lab demonstrates connection exhaustion Distributed Denial o
 cd part_A
 docker-compose up -d
 
-# Verify deployment
-curl http://localhost:8080
+# Verify HTTP/2 deployment
+curl --http2-prior-knowledge http://localhost:8080
 ```
 
 #### Deploy Part B (Advanced Adaptive)
@@ -62,8 +63,8 @@ curl http://localhost:8080
 cd part_B
 docker-compose up -d
 
-# Verify deployment
-curl http://localhost:8080
+# Verify HTTP/2 deployment
+curl --http2-prior-knowledge http://localhost:8080
 ```
 
 ### Google Cloud Platform Deployment
@@ -88,11 +89,11 @@ sudo usermod -aG docker $USER
 
 #### 2. Configure Firewall
 ```bash
-# Allow HTTP traffic on port 8080
-gcloud compute firewall-rules create allow-slowloris-lab \
+# Allow HTTP/2 traffic on port 8080
+gcloud compute firewall-rules create allow-http2-slowloris-lab \
     --allow tcp:8080 \
     --source-ranges 0.0.0.0/0 \
-    --description "Allow Slowloris Lab traffic"
+    --description "Allow HTTP/2 Slowloris Lab traffic"
 ```
 
 #### 3. Deploy Lab
@@ -108,38 +109,38 @@ docker-compose up -d
 
 ## Lab Components
 
-### 1. Target Server (Apache)
-Configured Apache web server that serves as the attack target:
-- Standard Apache configuration with connection limits
-- Server status module enabled for monitoring
+### 1. Target Server (Quart HTTP/2)
+Configured Quart HTTP/2 web server that serves as the attack target:
+- Hypercorn ASGI server with HTTP/2 multiplexing support
+- Async processing with configurable worker counts
 - Runs on port 80 inside container (mapped to 8080 on host)
-- Configured with typical production connection handling
+- Configured with typical HTTP/2 stream handling
 
 ### 2. Attack Scripts
 
-#### Part A: Basic Slowloris (`slowloris_attack.py`)
-- Simple implementation of slow HTTP request transmission
-- Maintains multiple concurrent connections
-- Sends incomplete HTTP headers at slow intervals
-- Designed for educational demonstration of the core concept
+#### Part A: Basic HTTP/2 Slowloris (`slowloris.py`)
+- Simple implementation of slow HTTP/2 stream transmission
+- Maintains multiple concurrent HTTP/2 connections with multiple streams each
+- Sends incomplete HTTP/2 frames at slow intervals
+- Designed for educational demonstration of HTTP/2 stream exhaustion
 
-#### Part B: Advanced Adaptive (`advanced_slowloris_attack.py`)
-- Intelligent attack adaptation based on server responses
-- Dynamic connection management and pacing
-- Evasion techniques to avoid detection
-- Adaptive sleep intervals and request patterns
+#### Part B: Advanced Adaptive HTTP/2 (`advanced_slowloris.py`)
+- Intelligent attack adaptation based on HTTP/2 server responses
+- Dynamic connection and stream management with adaptive pacing
+- Stealth techniques and evasion to avoid detection
+- Adaptive sleep intervals and HTTP/2 frame patterns
 
 ### 3. Container Architecture
 
 #### Part A Configuration:
-- **Victim**: Apache web server with standard settings
-- **Attacker**: Basic Slowloris with 1024 connections
-- **Expected Impact**: Connection pool exhaustion over time
+- **Victim**: Single-worker Quart HTTP/2 server
+- **Attacker**: Basic HTTP/2 Slowloris with 256 connections and 10 streams each
+- **Expected Impact**: HTTP/2 stream pool exhaustion over time
 
 #### Part B Configuration:
-- **Victim**: Same Apache server configuration
-- **Attacker**: Advanced adaptive attack with intelligent pacing
-- **Expected Impact**: More sustained and resilient attack
+- **Victim**: Multi-worker Quart HTTP/2 server
+- **Attacker**: Advanced adaptive HTTP/2 attack with 100 connections and 25 streams each
+- **Expected Impact**: More sustained and resilient HTTP/2 stream exhaustion
 
 ## Performance Monitoring and Analysis
 
@@ -150,23 +151,23 @@ This lab includes comprehensive connection and performance monitoring capabiliti
 
 ### Key Metrics to Monitor
 
-#### Connection Analysis:
-- **Active Connections**: Number of established connections to port 8080
-- **Connection States**: Distribution of TCP connection states
-- **Connection Duration**: How long connections remain active
-- **Apache Workers**: Busy vs idle worker processes
+#### HTTP/2 Stream Analysis:
+- **Active Connections**: Number of established HTTP/2 connections to port 8080
+- **Stream States**: Distribution of HTTP/2 stream states within connections
+- **Stream Duration**: How long individual streams remain active
+- **HTTP/2 Multiplexing**: Stream counts per connection and overall utilization
 
 #### Server Performance:
 - **Response Time**: Normal vs degraded response times
-- **New Connection Success**: Ability to establish new connections
-- **Service Availability**: Overall server responsiveness
-- **Connection Pool Status**: Apache worker utilization
+- **New Connection Success**: Ability to establish new HTTP/2 connections
+- **Service Availability**: Overall HTTP/2 server responsiveness
+- **Stream Pool Status**: HTTP/2 stream utilization and worker load
 
 #### Attack Effectiveness:
-- **Connection Persistence**: How long attack connections survive
-- **Resource Consumption**: Server resource usage patterns
-- **Legitimate User Impact**: Effect on normal user connections
-- **Detection Evasion**: Stealth characteristics of the attack
+- **Stream Persistence**: How long attack streams and connections survive
+- **Resource Consumption**: HTTP/2 server resource usage patterns
+- **Legitimate User Impact**: Effect on normal HTTP/2 user connections
+- **Detection Evasion**: Stealth characteristics of HTTP/2 attack patterns
 
 ### Quick Monitoring Commands
 
@@ -177,32 +178,32 @@ watch -n 2 'ss -tan | grep :8080 | wc -l'
 # Monitor connection states
 watch -n 3 'ss -tan | grep :8080 | awk "{print \$1}" | sort | uniq -c'
 
-# Monitor Apache server status
-watch -n 5 'curl -s http://localhost:8080/server-status?auto | grep -E "(BusyWorkers|IdleWorkers)"'
+# Monitor HTTP/2 server health status
+watch -n 5 'curl --http2-prior-knowledge -s http://localhost:8080/health'
 
-# Test legitimate user impact
-timeout 10 curl -o /dev/null -s -w "Response: %{time_total}s | HTTP: %{http_code}\n" http://localhost:8080
+# Test legitimate user impact with HTTP/2
+timeout 10 curl --http2-prior-knowledge -o /dev/null -s -w "Response: %{time_total}s | HTTP: %{http_code}\n" http://localhost:8080
 ```
 
 ## Expected Attack Progression
 
-### Part A (Basic Slowloris) Timeline:
-- **0-60s**: Initial connection establishment phase
-- **60-180s**: Connection pool gradually fills
-- **180-300s**: Server connection limits approached
-- **300s+**: New connections refused, DoS achieved
+### Part A (Basic HTTP/2 Slowloris) Timeline:
+- **0-60s**: Initial HTTP/2 connection establishment and stream creation
+- **60-180s**: HTTP/2 stream pools gradually fill across connections
+- **180-300s**: Server stream limits approached, multiplexing degraded
+- **300s+**: New streams refused, HTTP/2 DoS achieved
 
-### Part B (Advanced Adaptive) Timeline:
-- **0-90s**: Intelligent connection establishment with adaptive pacing
-- **90-240s**: Dynamic adjustment based on server behavior
-- **240-600s**: Sustained attack with evasion techniques
-- **600s+**: Long-term persistence with minimal detection
+### Part B (Advanced Adaptive HTTP/2) Timeline:
+- **0-90s**: Intelligent HTTP/2 connection establishment with adaptive stream pacing
+- **90-240s**: Dynamic adjustment based on HTTP/2 server behavior and stream responses
+- **240-600s**: Sustained HTTP/2 attack with stealth evasion techniques
+- **600s+**: Long-term persistence with minimal detection through HTTP/2 legitimacy
 
 ### Key Attack Indicators:
-1. **Gradual Connection Increase**: Steady rise in established connections
-2. **Response Degradation**: Increasing response times for legitimate requests
-3. **Worker Exhaustion**: All Apache workers become busy
-4. **Connection Refusal**: New connections timeout or are refused
+1. **Gradual Stream Increase**: Steady rise in HTTP/2 streams across connections
+2. **Response Degradation**: Increasing response times for legitimate HTTP/2 requests
+3. **Stream Pool Exhaustion**: HTTP/2 server stream handling becomes saturated
+4. **Connection/Stream Refusal**: New HTTP/2 connections or streams timeout or are refused
 
 ## Container Management
 
@@ -215,7 +216,7 @@ docker-compose ps
 # View attack progress
 docker-compose logs attacker
 
-# View Apache server logs
+# View HTTP/2 server logs
 docker-compose logs victim
 
 # Stop the lab
@@ -228,87 +229,87 @@ docker-compose down && docker-compose up -d
 ### Monitoring Attack Progress
 
 ```bash
-# Monitor attack container output
-docker logs -f slowloris-attacker-client
+# Monitor HTTP/2 attack container output
+docker logs -f http2-slowloris-attacker-client
 
-# Check Apache access logs
-docker exec apache-victim tail -f /var/log/apache2/access.log
+# Check HTTP/2 server access patterns
+docker-compose logs victim | grep -E "(connection|stream|request)"
 
-# Monitor Apache error logs
-docker exec apache-victim tail -f /var/log/apache2/error.log
+# Monitor HTTP/2 server errors
+docker-compose logs victim | grep -i error
 ```
 
 ## Advanced Attack Analysis
 
-### Connection Pattern Analysis
+### HTTP/2 Stream Pattern Analysis
 ```bash
-# Analyze connection establishment patterns
-tcpdump -i any -nn -s 0 'port 8080 and tcp[tcpflags] & tcp-syn != 0' > connection_analysis.log
+# Analyze HTTP/2 connection establishment patterns
+tcpdump -i any -nn -s 0 'port 8080 and tcp[tcpflags] & tcp-syn != 0' > http2_connection_analysis.log
 
-# Monitor partial HTTP requests
-tcpdump -i any -nn -A 'port 8080 and length < 100' > partial_requests.log
+# Monitor HTTP/2 frames and partial streams (requires HTTP/2 analysis tools)
+tcpdump -i any -nn -A 'port 8080 and length < 200' > http2_partial_streams.log
 ```
 
-### Server Behavior Analysis
+### HTTP/2 Server Behavior Analysis
 ```bash
-# Track Apache worker process behavior
-watch -n 5 'ps aux | grep apache2 | grep -v grep | wc -l'
+# Track HTTP/2 server process behavior
+watch -n 5 'ps aux | grep hypercorn | grep -v grep | wc -l'
 
-# Monitor file descriptor usage
+# Monitor file descriptor usage for HTTP/2 connections
 watch -n 3 'lsof | grep :8080 | wc -l'
 
-# Check connection limits
+# Check HTTP/2 connection and stream limits
 cat /proc/sys/net/core/somaxconn
 ```
 
 ## Expected Learning Outcomes
 
-### Understanding Stealth Attacks
-- Comprehend how low-bandwidth attacks can achieve high impact
-- Understand the difference between volumetric and connection-based attacks
-- Learn about attack persistence and evasion techniques
+### Understanding HTTP/2 Stealth Attacks
+- Comprehend how low-bandwidth HTTP/2 attacks can achieve high impact through stream multiplexing
+- Understand the difference between volumetric and HTTP/2 stream-based attacks
+- Learn about HTTP/2 attack persistence and evasion techniques
 
-### Connection Management Analysis
-- Analyze how web servers handle connection pools
-- Understand the impact of connection timeouts and limits
-- Observe connection state transitions during attacks
+### HTTP/2 Stream Management Analysis
+- Analyze how HTTP/2 servers handle stream pools and multiplexing
+- Understand the impact of stream timeouts, limits, and flow control
+- Observe HTTP/2 stream state transitions during attacks
 
-### Detection and Mitigation Insights
-- Identify characteristics that distinguish attack from legitimate traffic
-- Understand the challenges of detecting stealth attacks
-- Learn about adaptive attack techniques that evade simple defenses
+### HTTP/2 Detection and Mitigation Insights
+- Identify characteristics that distinguish HTTP/2 attack streams from legitimate traffic
+- Understand the challenges of detecting stealth HTTP/2 attacks that appear legitimate
+- Learn about adaptive HTTP/2 attack techniques that evade simple defenses
 
 ### Cloud vs Local Performance
-- Compare attack effectiveness between local Docker and GCP deployment
-- Analyze how cloud infrastructure affects connection handling
+- Compare HTTP/2 attack effectiveness between local Docker and GCP deployment
+- Analyze how cloud infrastructure affects HTTP/2 connection and stream handling
 - Evaluate scalability and resource differences in different environments
 
 ## Troubleshooting
 
 ### Common Issues
-- **Attack not effective**: Check Apache MaxRequestWorkers configuration
-- **Connections dropping quickly**: Verify KeepAlive timeout settings
+- **Attack not effective**: Check HTTP/2 server worker configuration and stream limits
+- **Connections/streams dropping quickly**: Verify HTTP/2 timeout settings and flow control
 - **Port conflicts**: Ensure port 8080 is available
 
-### Apache Configuration Check
+### HTTP/2 Server Configuration Check
 ```bash
-# Check Apache configuration
-docker exec apache-victim apache2ctl -S
+# Check HTTP/2 server configuration
+docker-compose logs victim | grep -i config
 
-# View current settings
-docker exec apache-victim grep -E "(MaxRequestWorkers|KeepAlive)" /etc/apache2/apache2.conf
+# View current HTTP/2 settings
+docker-compose exec victim env | grep -E "(WORKERS|TIMEOUT)"
 ```
 
-### Attack Debugging
+### HTTP/2 Attack Debugging
 ```bash
-# Check attack script output
-docker logs slowloris-attacker-client
+# Check HTTP/2 attack script output
+docker logs http2-slowloris-attacker-client
 
-# Monitor attack connection count
-docker exec apache-victim ss -tan | grep :8080 | wc -l
+# Monitor HTTP/2 attack connection count
+docker-compose exec victim ss -tan | grep :8080 | wc -l
 
-# Verify attack script is running
-docker exec slowloris-attacker-client ps aux | grep python
+# Verify HTTP/2 attack script is running
+docker-compose exec attacker ps aux | grep python
 ```
 
 ## Educational Integration
@@ -350,16 +351,16 @@ While demonstrating attack techniques, this lab emphasizes:
 
 ### Performance Metrics
 Students should focus on collecting and analyzing:
-- Connection count progression over time
-- Response time degradation patterns
-- Server resource utilization during attacks
+- HTTP/2 connection and stream count progression over time
+- Response time degradation patterns for HTTP/2 requests
+- HTTP/2 server resource utilization during attacks
 - Attack persistence and recovery characteristics
 
 ### Comparative Analysis Framework
-- **Environment Comparison**: Local Docker vs GCP connection handling
-- **Attack Variation**: Basic vs advanced attack effectiveness
-- **Server Configuration**: Impact of different Apache settings
-- **Detection Analysis**: Identifying attack signatures in connection patterns
+- **Environment Comparison**: Local Docker vs GCP HTTP/2 connection handling
+- **Attack Variation**: Basic vs advanced HTTP/2 attack effectiveness
+- **Server Configuration**: Impact of different HTTP/2 server settings
+- **Detection Analysis**: Identifying attack signatures in HTTP/2 stream patterns
 
 ## Safety Considerations
 

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HTTP/2 CVE-2023-43622 Attack Lab</title>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .header { color: #d73027; font-size: 24px; margin-bottom: 20px; }
+        .status { background: #f0f8ff; padding: 15px; border-left: 4px solid #4682b4; }
+        .vulnerability { background: #ffe4e1; padding: 15px; border-left: 4px solid #dc143c; }
+        code { background: #f5f5f5; padding: 2px 6px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="header">🎯 Apache HTTP/2 Attack Lab</div>
+    
+    <div class="status">
+        <h3>✅ Server Status: Online</h3>
+        <p><strong>Server:</strong> Apache/2.4.57 (Alpine)</p>
+        <p><strong>HTTP/2:</strong> Enabled</p>
+        <p><strong>Timestamp:</strong> <script>document.write(new Date().toISOString());</script></p>
+    </div>
+
+    <div class="vulnerability">
+        <p><strong>Target:</strong> Apache HTTP Server</p>
+        <p><strong>Type:</strong> HTTP/2 Update Flow Control Attack</p>
+        <p><strong>Impact:</strong> Denial of Service via connection pool exhaustion</p>
+    </div>
+
+    <h3>🔗 Test Endpoints</h3>
+    <ul>
+        <li><a href="/health">Health Check</a> - Server status endpoint</li>
+        <li><a href="/large-test.jpg">Large File</a> - 10MB test file for attack amplification</li>
+    </ul>
+
+    <h3>🚀 Attack Commands</h3>
+    <p>Run these commands from the attacker container:</p>
+    <pre><code># Zero Window Update Attack (CVE-2023-43622)
+python3 zero_window_attack.py apache-victim --connections 50
+
+# Slow Incremental Window Attack  
+python3 slow_inc_window_attack.py apache-victim --connections 30
+
+# Advanced Slow Incremental Window Attack  
+python3 adv_slow_inc_window_attack.py apache-victim --connections 30
+
+    <script>
+        // Add HTTP/2 detection
+        if (location.protocol === 'https:') {
+            fetch('/health', {method: 'HEAD'}).then(response => {
+                const protocol = response.headers.get('alt-svc') ? 'HTTP/2' : 'HTTP/1.1';
+                console.log('Protocol detected:', protocol);
+            });
+        }
+    </script>
+</body>
+</html>

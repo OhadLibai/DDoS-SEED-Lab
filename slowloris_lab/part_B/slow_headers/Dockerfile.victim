@@ -1,0 +1,28 @@
+# Apache HTTPD latest with configurable HTTP/2 vulnerability for lab
+FROM httpd:latest
+
+# Install curl for health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Enable HTTP/2 module
+RUN sed -i 's/#LoadModule http2_module/LoadModule http2_module/' /usr/local/apache2/conf/httpd.conf
+
+# Copy configuration template
+COPY apache-vuln-config.conf /usr/local/apache2/conf/extra/
+
+# Add include for vulnerability configuration
+RUN echo "" >> /usr/local/apache2/conf/httpd.conf && \
+    echo "# Include vulnerability configuration" >> /usr/local/apache2/conf/httpd.conf && \
+    echo "Include conf/extra/apache-vuln-config.conf" >> /usr/local/apache2/conf/httpd.conf
+
+# Create simple web content
+RUN echo '<html><head><title>HTTP/2 Vulnerable Server</title></head><body>' > /usr/local/apache2/htdocs/index.html && \
+    echo '<h1>Apache HTTP/2 Lab Server</h1>' >> /usr/local/apache2/htdocs/index.html && \
+    echo '<p>Configured for slow headers attack testing</p>' >> /usr/local/apache2/htdocs/index.html && \
+    echo '</body></html>' >> /usr/local/apache2/htdocs/index.html
+
+# Expose HTTP port
+EXPOSE 80
+
+# Start Apache
+CMD ["httpd", "-D", "FOREGROUND"]

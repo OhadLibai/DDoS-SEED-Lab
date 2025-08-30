@@ -1,0 +1,32 @@
+# Part B: Multi-Worker HTTP/2 Attack Lab
+name: http2-flood-lab-part-b
+
+services:
+  victim:
+    build:
+      context: ..
+      dockerfile: part-B/Dockerfile.victim
+    container_name: http2-victim-multi
+    ports:
+      - "8080:80"
+    networks:
+      - attack-net
+    environment:
+      - DIFFICULITY=${DIFFICULITY:-5}
+      - SCENARIO=${SCENARIO:-proof_of_work}
+
+  attacker:
+    build:
+      context: ..
+      dockerfile: Dockerfile.attacker
+    container_name: http2-attacker-advanced
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: ${ATTACK_SCRIPT:-python http_flood.py} http://victim:80 128
+    networks:
+      - attack-net
+    depends_on:
+      - victim
+
+networks:
+  attack-net:

@@ -1,0 +1,65 @@
+name: slow_headers
+services:
+  victim:
+    build:
+      context: .
+      dockerfile: Dockerfile.victim
+    container_name: apache-http2-victim
+    ports:
+      - "8080:80"
+    networks:
+      - attack-network
+    environment:
+      # HTTP/2 Vulnerability Configuration - EASY MODE (very vulnerable)
+      - H2_MAX_STREAMS=10           # Low stream limit
+      - H2_STREAM_MEM_SIZE=1000000  # 1MB per stream (low)
+      - H2_WINDOW_SIZE=8192         # Small window
+      - H2_MAX_HEADER_SIZE=8192     # Small header limit
+      
+      # Server Timeout Configuration - VULNERABLE
+      - SERVER_TIMEOUT=300          # Long timeout
+      - KEEPALIVE_TIMEOUT=300       # Long keepalive  
+      - MAX_KEEPALIVE_REQUESTS=1000 # Many requests per connection
+      
+      # Resource Limits - CONSTRAINED (vulnerable)
+      - SERVER_LIMIT=1              # Only 1 server process
+      - MAX_WORKERS=10              # Very few workers
+      - THREADS_PER_CHILD=5         # Few threads
+      
+      # Request Limits - VULNERABLE  
+      - REQUEST_FIELD_SIZE=8192     # Small field size
+      - REQUEST_FIELDS=50           # Few fields allowed
+      - REQUEST_LINE_SIZE=8192      # Small request line
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  attacker:
+    build:
+      context: .
+      dockerfile: Dockerfile.attacker
+    container_name: slow-headers-attacker
+    depends_on:
+      victim:
+        condition: service_healthy
+    networks:
+      - attack-network
+    environment:
+      # Attack Configuration - EASY MODE (gentle attack)
+      - TARGET_HOST=victim
+      - TARGET_PORT=80
+      - CONNECTIONS=3             # Few connections
+      - STREAMS_PER_CONNECTION=2  # Few streams per connection
+      - MIN_DELAY=1.0             # Slow attack
+      - MAX_DELAY=3.0             # Slow attack  
+      - HEADERS_COUNT=10          # Few headers per request
+    command: >
+      python simple_slow_headers.py 
+      --verbose
+
+networks:
+  attack-network:
+    driver: bridge

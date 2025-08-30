@@ -1,0 +1,95 @@
+# Dockerfile for CVE-2023-43622 Slowloris Attacker
+# This container runs the specialized attack script targeting CVE-2023-43622
+FROM python:3.11-slim
+
+# Set maintainer info
+LABEL maintainer="SEED Labs Educational Project"
+LABEL description="CVE-2023-43622 Slowloris Attacker - Educational Use Only"
+LABEL vulnerability="CVE-2023-43622"
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies for HTTP/2 and networking
+RUN apt-get update && \
+    apt-get install -y \
+    curl \
+    netcat-traditional \
+    net-tools \
+    procps \
+    dnsutils \
+    iputils-ping \
+    tcpdump \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies for HTTP/2 attack
+RUN pip install --no-cache-dir \
+    h2 \
+    requests
+
+# Copy the CVE-2023-43622 attack scripts
+COPY cve_2023_43622_slowloris.py /app/
+COPY cve_2023_43622_simple.py /app/
+RUN chmod +x /app/cve_2023_43622_slowloris.py /app/cve_2023_43622_simple.py
+
+# Create a startup script with attack information
+RUN echo '#!/bin/bash' > /start-cve-attack.sh && \
+    echo 'echo "==================================="' >> /start-cve-attack.sh && \
+    echo 'echo "CVE-2023-43622 Slowloris Attacker"' >> /start-cve-attack.sh && \
+    echo 'echo "Educational Demonstration Only"' >> /start-cve-attack.sh && \
+    echo 'echo "==================================="' >> /start-cve-attack.sh && \
+    echo 'echo "Target vulnerability: CVE-2023-43622"' >> /start-cve-attack.sh && \
+    echo 'echo "Attack method: HTTP/2 initial window size 0"' >> /start-cve-attack.sh && \
+    echo 'echo "Affected versions: Apache httpd 2.4.55-2.4.57"' >> /start-cve-attack.sh && \
+    echo 'echo "Python version: $(python --version)"' >> /start-cve-attack.sh && \
+    echo 'echo "H2 library: $(python -c \"import h2; print(h2.__version__)\")"' >> /start-cve-attack.sh && \
+    echo 'echo "==================================="' >> /start-cve-attack.sh && \
+    echo 'echo "Waiting for target server to be ready..."' >> /start-cve-attack.sh && \
+    echo 'sleep 10' >> /start-cve-attack.sh && \
+    echo 'echo "Starting CVE-2023-43622 attack..."' >> /start-cve-attack.sh && \
+    echo 'exec python /app/cve_2023_43622_slowloris.py "$@"' >> /start-cve-attack.sh && \
+    chmod +x /start-cve-attack.sh
+
+# Create a health check script
+RUN echo '#!/bin/bash' > /health-check.sh && \
+    echo '# Check if attack script dependencies are available' >> /health-check.sh && \
+    echo 'python -c "import h2, socket, threading, time" 2>/dev/null' >> /health-check.sh && \
+    echo 'echo $?' >> /health-check.sh && \
+    chmod +x /health-check.sh
+
+# Create a pre-attack validation script
+RUN echo '#!/bin/bash' > /validate-target.sh && \
+    echo 'TARGET_HOST="$1"' >> /validate-target.sh && \
+    echo 'TARGET_PORT="${2:-80}"' >> /validate-target.sh && \
+    echo 'echo "Validating target: $TARGET_HOST:$TARGET_PORT"' >> /validate-target.sh && \
+    echo 'echo "Testing basic connectivity..."' >> /validate-target.sh && \
+    echo 'nc -zv "$TARGET_HOST" "$TARGET_PORT" 2>&1' >> /validate-target.sh && \
+    echo 'if [ $? -eq 0 ]; then' >> /validate-target.sh && \
+    echo '    echo "✓ Target is reachable"' >> /validate-target.sh && \
+    echo '    echo "Testing HTTP response..."' >> /validate-target.sh && \
+    echo '    curl -s -o /dev/null -w "HTTP Status: %{http_code}, Time: %{time_total}s\n" "http://$TARGET_HOST:$TARGET_PORT/"' >> /validate-target.sh && \
+    echo '    echo "✓ Target validation complete"' >> /validate-target.sh && \
+    echo 'else' >> /validate-target.sh && \
+    echo '    echo "✗ Target not reachable - check network connectivity"' >> /validate-target.sh && \
+    echo '    exit 1' >> /validate-target.sh && \
+    echo 'fi' >> /validate-target.sh && \
+    chmod +x /validate-target.sh
+
+# Set environment variables for attack configuration
+ENV PYTHONUNBUFFERED=1
+ENV ATTACK_TYPE="CVE-2023-43622"
+ENV ATTACK_TARGET=""
+ENV ATTACK_CONNECTIONS="25"
+ENV ATTACK_PORT="80"
+
+# Expose no ports (attacker doesn't serve anything)
+
+# Add volume mount point for sharing attack logs
+VOLUME ["/attack-logs"]
+
+# Health check to ensure dependencies are working
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD /health-check.sh || exit 1
+
+# Default command shows help
+CMD ["python", "/app/cve_2023_43622_slowloris.py", "--help"]

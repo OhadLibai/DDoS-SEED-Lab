@@ -1,8 +1,8 @@
-# docker-compose for slowloris part A
+# docker-compose for slowloris part A - HTTP/1.1
 name: slowloris-lab-A
 services:
   victim:
-    image: httpd:2.2  # Old Apache server
+    image: httpd:2.2.14  # Old Apache server
     container_name: loris-victim-server
     ports:
       - "8080:80"
@@ -16,7 +16,7 @@ services:
     container_name: loris-attacker-client
     environment:
       - PYTHONUNBUFFERED=1
-    command: python slowloris_attack.py victim 256
+    command: python slowloris.py victim 256
     networks:
       - attack-net
     depends_on:

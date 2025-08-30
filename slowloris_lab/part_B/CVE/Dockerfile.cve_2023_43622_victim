@@ -1,0 +1,100 @@
+# Dockerfile for CVE-2023-43622 vulnerable Apache httpd server
+# This container runs Apache httpd 2.4.55 which is vulnerable to CVE-2023-43622
+FROM httpd:2.4.55
+
+# Set maintainer info
+LABEL maintainer="SEED Labs Educational Project"
+LABEL description="Apache httpd 2.4.55 vulnerable to CVE-2023-43622 - Educational Use Only"
+LABEL vulnerability="CVE-2023-43622"
+
+# Install necessary packages for HTTP/2 support and monitoring
+RUN apt-get update && \
+    apt-get install -y \
+    curl \
+    net-tools \
+    procps \
+    htop \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a simple test page
+RUN echo '<html><head><title>CVE-2023-43622 Test Server</title></head><body>' > /usr/local/apache2/htdocs/index.html && \
+    echo '<h1>Apache httpd 2.4.55 - CVE-2023-43622 Test Target</h1>' >> /usr/local/apache2/htdocs/index.html && \
+    echo '<p>This server is vulnerable to CVE-2023-43622 for educational testing.</p>' >> /usr/local/apache2/htdocs/index.html && \
+    echo '<p>Server Time: <script>document.write(new Date());</script></p>' >> /usr/local/apache2/htdocs/index.html && \
+    echo '</body></html>' >> /usr/local/apache2/htdocs/index.html
+
+# Create health check endpoint
+RUN echo '<html><body><h1>OK</h1><p>Server is responding</p></body></html>' > /usr/local/apache2/htdocs/health.html
+
+# Configure Apache for HTTP/2 and vulnerability demonstration
+RUN echo "# CVE-2023-43622 vulnerable configuration" > /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "LoadModule http2_module modules/mod_http2.so" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "LoadModule rewrite_module modules/mod_rewrite.so" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "LoadModule info_module modules/mod_info.so" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "# Enable HTTP/2" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "Protocols h2c http/1.1" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "# HTTP/2 settings optimized for CVE-2023-43622 maximum impact" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "H2MaxSessionStreams 1000" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "H2StreamMaxMemSize 10485760" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "H2WindowSize 2097152" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "H2MinWorkers 1" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "H2MaxWorkers 5" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "H2SessionExtraFiles 1000" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "H2TLSWarmUpSize 0" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "# Lower timeouts to show impact faster (but still vulnerable)" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "Timeout 300" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "KeepAliveTimeout 15" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "# Resource limits optimized for CVE-2023-43622 demonstration" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "LimitRequestBody 1073741824" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "MaxRequestWorkers 30" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "ThreadsPerChild 10" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "# Enable server status for monitoring" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "LoadModule status_module modules/mod_status.so" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "<Location \"/server-status\">" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "    SetHandler server-status" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "    Require all granted" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "</Location>" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "<Location \"/server-info\">" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "    SetHandler server-info" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "    Require all granted" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf && \
+    echo "</Location>" >> /usr/local/apache2/conf/extra/cve-2023-43622.conf
+
+# Include the vulnerability configuration
+RUN echo "Include conf/extra/cve-2023-43622.conf" >> /usr/local/apache2/conf/httpd.conf
+
+# Add logging for HTTP/2 analysis
+RUN echo 'LogFormat "%h %l %u %t \\"%r\\" %>s %b \\"%{Referer}i\\" \\"%{User-Agent}i\\" %{HTTP2}e" http2_combined' >> /usr/local/apache2/conf/httpd.conf && \
+    echo 'CustomLog /proc/self/fd/1 http2_combined' >> /usr/local/apache2/conf/httpd.conf
+
+# Set appropriate permissions
+RUN chown -R www-data:www-data /usr/local/apache2/htdocs/
+
+# Expose HTTP port
+EXPOSE 80
+
+# Add startup script with vulnerability info
+RUN echo '#!/bin/bash' > /start-vulnerable-apache.sh && \
+    echo 'echo "==================================="' >> /start-vulnerable-apache.sh && \
+    echo 'echo "CVE-2023-43622 Vulnerable Apache httpd 2.4.55"' >> /start-vulnerable-apache.sh && \
+    echo 'echo "Educational Demonstration Only"' >> /start-vulnerable-apache.sh && \
+    echo 'echo "==================================="' >> /start-vulnerable-apache.sh && \
+    echo 'echo "Apache version: $(httpd -v | head -1)"' >> /start-vulnerable-apache.sh && \
+    echo 'echo "HTTP/2 support: $(httpd -M | grep http2 || echo NONE)"' >> /start-vulnerable-apache.sh && \
+    echo 'echo "Vulnerability: CVE-2023-43622 - HTTP/2 window size 0 DoS"' >> /start-vulnerable-apache.sh && \
+    echo 'echo "Port: 80 (HTTP/2 cleartext)"' >> /start-vulnerable-apache.sh && \
+    echo 'echo "Status: http://localhost/server-status"' >> /start-vulnerable-apache.sh && \
+    echo 'echo "==================================="' >> /start-vulnerable-apache.sh && \
+    echo 'exec httpd-foreground' >> /start-vulnerable-apache.sh && \
+    chmod +x /start-vulnerable-apache.sh
+
+# Health check to verify server is running
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/health.html || exit 1
+
+# Start the vulnerable Apache server
+CMD ["/start-vulnerable-apache.sh"]

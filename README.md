@@ -10,43 +10,43 @@ These labs are part of the broader **SEED (SEcurity EDucation)** project, which 
 
 ## Lab Components
 
-### 🌊 [HTTP Flood Attack Lab](./http_flood_lab/)
-Explores volumetric DDoS attacks that overwhelm server resources through high-volume HTTP requests.
+### 🌊 [HTTP/2 Flood Attack Lab](./http_flood_lab/)
+Explores volumetric DDoS attacks that overwhelm server resources through high-volume HTTP/2 multiplexed requests.
 
 **Key Learning Areas:**
-- Understanding volumetric attack patterns
-- Server resource exhaustion mechanisms  
-- Single-threaded vs multi-threaded server resilience
-- Performance impact measurement
+- Understanding HTTP/2 multiplexing vulnerabilities
+- Server resource exhaustion via stream flooding
+- Single vs multi-worker HTTP/2 server resilience
+- Performance impact measurement in HTTP/2 environments
 
-### 🐌 [Slowloris Attack Lab](./slowloris_lab/)
-Investigates connection exhaustion attacks that consume server resources with minimal bandwidth usage.
+### 🐌 [HTTP/2 Slowloris Attack Lab](./slowloris_lab/)
+Investigates stream exhaustion attacks that consume HTTP/2 server resources through incomplete requests.
 
 **Key Learning Areas:**
-- Low-bandwidth, high-impact attack techniques
-- Connection pool exhaustion strategies
-- Stealth attack characteristics
-- Adaptive attack methodologies
+- Low-bandwidth, high-impact HTTP/2 stream exhaustion techniques
+- HTTP/2 connection and stream pool exhaustion strategies
+- Stealth attack characteristics using legitimate HTTP/2 features
+- Adaptive attack methodologies for HTTP/2 environments
 
 ## Repository Structure
 
 ```
 DDoS-SEED-lab/
 ├── README.md                           # This file
-├── HTTP_FLOOD_MONITORING_GUIDE.md      # Comprehensive HTTP flood monitoring
-├── SLOWLORIS_MONITORING_GUIDE.md       # Detailed Slowloris monitoring  
-├── MONITORING_QUICK_REFERENCE.md       # Quick reference commands
-├── http_flood_lab/                     # HTTP Flood Attack Lab
+├── HTTP_FLOOD_MONITORING_GUIDE.md      # Comprehensive HTTP/2 flood monitoring
+├── SLOWLORIS_MONITORING_GUIDE.md       # Detailed HTTP/2 Slowloris monitoring  
+├── MONITORING_QUICK_REFERENCE.md       # Quick reference commands for HTTP/2
+├── http_flood_lab/                     # HTTP/2 Flood Attack Lab
 │   ├── README.md                       # Lab-specific instructions
-│   ├── part_A/                         # Single-threaded Flask server
-│   ├── part_B/                         # Multi-threaded Gunicorn server
-│   ├── victim_app.py                   # Web application target
-│   ├── http_flood.py                   # Attack script
+│   ├── part_A/                         # Single-worker HTTP/2 server
+│   ├── part_B/                         # Multi-worker HTTP/2 server
+│   ├── victim_app.py                   # HTTP/2 web application target
+│   ├── http_flood.py                   # HTTP/2 attack script
 │   └── Dockerfile.flood_attcker        # Attacker container
-└── slowloris_lab/                      # Slowloris Attack Lab
+└── slowloris_lab/                      # HTTP/2 Slowloris Attack Lab
     ├── README.md                       # Lab-specific instructions
-    ├── part_A/                         # Basic Slowloris attack
-    ├── part_B/                         # Advanced adaptive attack
+    ├── part_A/                         # Basic HTTP/2 Slowloris attack
+    ├── part_B/                         # Advanced adaptive HTTP/2 attack
     └── ...                             # Attack scripts and configurations
 ```
 
@@ -74,10 +74,11 @@ DDoS-SEED-lab/
 - SSH client for remote access
 
 ### Knowledge Prerequisites
-- Basic understanding of HTTP protocol
+- Basic understanding of HTTP/1.1 and HTTP/2 protocols
 - Familiarity with client-server architecture
-- Elementary networking concepts (TCP connections, ports)
+- Elementary networking concepts (TCP connections, ports, multiplexing)
 - Basic cybersecurity awareness
+- Understanding of HTTP/2 features (multiplexing, server push, header compression)
 
 ### System Requirements
 - **Local Development:**
@@ -113,24 +114,24 @@ cd part_A  # or part_B
 docker-compose up -d
 
 # Start monitoring (refer to monitoring guides)
-watch -n 1 'curl -w "%{time_total}s\n" http://localhost:8080'
+watch -n 1 'curl --http2 -w "%{time_total}s\n" http://localhost:8080'
 ```
 
 ## Performance Analysis Framework
 
-This project emphasizes **comparative performance analysis** between different deployment environments:
+This project emphasizes **comparative performance analysis** between different deployment environments and protocols:
 
 ### Local vs Cloud Comparison
-- **Local Environment**: Docker containers on local machine
-- **Cloud Environment**: Deployment on Google Cloud Platform
-- **Comparison Metrics**: CPU usage, response latency, traffic throughput, scalability limits
+- **Local Environment**: Docker containers with HTTP/2 support on local machine
+- **Cloud Environment**: HTTP/2 deployment on Google Cloud Platform
+- **Comparison Metrics**: CPU usage, response latency, traffic throughput, stream multiplexing efficiency, scalability limits
 
 ### Monitoring Resources
 Comprehensive monitoring guides are provided to facilitate detailed performance analysis:
 
-- **[HTTP Flood Monitoring Guide](./HTTP_FLOOD_MONITORING_GUIDE.md)** - Complete monitoring setup for volumetric attacks
-- **[Slowloris Monitoring Guide](./SLOWLORIS_MONITORING_GUIDE.md)** - Detailed connection exhaustion monitoring
-- **[Quick Reference Guide](./MONITORING_QUICK_REFERENCE.md)** - Essential commands and metrics summary
+- **[HTTP/2 Flood Monitoring Guide](./HTTP_FLOOD_MONITORING_GUIDE.md)** - Complete monitoring setup for HTTP/2 volumetric attacks
+- **[HTTP/2 Slowloris Monitoring Guide](./SLOWLORIS_MONITORING_GUIDE.md)** - Detailed HTTP/2 stream exhaustion monitoring
+- **[Quick Reference Guide](./MONITORING_QUICK_REFERENCE.md)** - Essential HTTP/2 commands and metrics summary
 
 ## Educational Integration
 
