@@ -265,15 +265,3 @@ echo "sudo shutdown -h now" | at now + 2 hours
 **Attack not effective**:
 - Increase DIFFICULITY level. The higher the difficulity- the busiest the server is.
 - Check container resource limits
-
-## 🎓 Learning Deliverables
-This lab follows the SEED (SEcurity EDucation) project methodology, emphasizing:
-- Performance comparison reports
-- Attack effectiveness analysis
-- Infrastructure resilience assessment
-- Defensive strategy recommendations
-  
-- Hands-on experiential learning
-- Controlled laboratory environments  
-- Comparative analysis approaches
-- Defensive security perspectives
