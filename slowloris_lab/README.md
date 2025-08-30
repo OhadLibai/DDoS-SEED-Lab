@@ -97,6 +97,9 @@ gcloud compute firewall-rules create allow-slowloris-lab \
 
 #### 3. Deploy Lab
 ```bash
+# Install git
+sudo apt update
+sudo apt install git -y
 # Clone repository on GCP VM
 git clone <repository-url>
 cd DDoS-SEED-lab/slowloris_lab
