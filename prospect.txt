@@ -104,3 +104,4 @@ DDoS-SEED-Lab/
     └── deploy-attack.sh
 
 The lab will be constructed in the form and shape of SEED labs.
+A detailed and conclusive analysis file, containing cloud vs. local attack deployments performance delta measures, will also be handed over.
