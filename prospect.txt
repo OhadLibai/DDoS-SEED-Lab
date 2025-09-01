@@ -102,3 +102,5 @@ DDoS-SEED-Lab/
     ├── attacks/               # Slowloris variants
     ├── deploy-server.sh
     └── deploy-attack.sh
+
+The lab will be constructed in the form and shape of SEED labs.
