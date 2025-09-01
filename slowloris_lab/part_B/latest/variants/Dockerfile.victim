@@ -1,9 +1,0 @@
-FROM httpd:latest
-
-# Enable HTTP/2 module for cleartext HTTP/2 (h2c) - Standard configuration
-RUN sed -i 's/#LoadModule rewrite_module/LoadModule rewrite_module/' /usr/local/apache2/conf/httpd.conf && \
-    echo "LoadModule http2_module modules/mod_http2.so" >> /usr/local/apache2/conf/httpd.conf && \
-    echo "Protocols h2c http/1.1" >> /usr/local/apache2/conf/httpd.conf && \
-    echo "H2Direct on" >> /usr/local/apache2/conf/httpd.conf
-
-EXPOSE 80

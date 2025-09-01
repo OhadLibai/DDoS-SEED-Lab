@@ -2,255 +2,373 @@
 
 ## Overview
 
-This lab explores HTTP/2 flow control vulnerabilities through three distinct attack types. Each attack demonstrates different exploitation techniques.
+This lab explores HTTP/2 flow control vulnerabilities through three distinct attack types. Each attack demonstrates different exploitation techniques using a unified deployment architecture.
 
-**Focus**: Compare attack effectiveness between local Docker environments and GCP free-tier cloud deployment to understand network conditions' impact on attack success.
+**Focus**: Learn HTTP/2 protocol vulnerabilities through hands-on attack experimentation comparing local controlled environments vs. real internet conditions.
+
+## Network Architecture
+
+### Local Setup
+```
+┌─────────────────┐    ┌─────────────────┐
+│ Attack Container│◄──►│Server Container │
+│ (http2-attacker)│    │ (Apache)        │
+└─────────────────┘    └─────────────────┘
+     Bridge Network        Port 80
+```
+
+### GCP Setup
+```
+┌─────────────────┐    Internet    ┌─────────────────┐
+│ Local Attack    │◄──────────────►│ GCP VM          │
+│ Container       │                │ ┌─────────────┐ │
+└─────────────────┘                │ │Apache       │ │
+                                   │ │Container    │ │
+                                   │ └─────────────┘ │
+                                   └─────────────────┘
+```
+
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- **Local**: Docker, Docker Compose
-- **GCP**: Google Cloud CLI, Terraform, GCP project (free tier)
+- **Local**: Docker, Docker Compose, Python 3, curl
+- **GCP**: Google Cloud CLI, GCP project (free tier)
 
-### Choose Your Attack Lab
+### Attack Types
 
-| Lab | Target | Learning Focus | Start Command |
-|-----|--------|----------------|---------------|
-| **Zero-Window** | Apache 2.4.55 | Basic HTTP/2 flow control | `cd zero-window/local && ./run.sh` |
-| **Slow-Incremental** | Apache 2.4.62 | Sustained resource exhaustion | `cd slow-incremental/local && ./run.sh` |
-| **Adaptive-Slow** | Apache 2.4.62 | Advanced attack intelligence | `cd adaptive-slow/local && ./run.sh` |
+| Attack | Apache Version | Learning Focus |
+|--------|---------------|----------------|
+| **Zero-Window** | 2.4.55 | Basic HTTP/2 flow control exploitation |
+| **Slow-Incremental** | 2.4.62 | Sustained resource exhaustion patterns |
+| **Adaptive-Slow** | 2.4.62 | Advanced intelligent attack adaptation |
 
-### Local Docker Deployment
+### Attack Techniques Explained
 
-**Run attacks locally with Docker:**
+**Zero-Window Attack:**
+- **Mechanism**: Sets INITIAL_WINDOW_SIZE=0 in HTTP/2 SETTINGS frame
+- **Impact**: Forces server to hold worker threads indefinitely
+- **Learning**: Basic HTTP/2 flow control exploitation
+
+**Slow-Incremental Attack:**  
+- **Mechanism**: Sends minimal WINDOW_UPDATE increments
+- **Impact**: Artificially limits server transmission speed
+- **Learning**: Resource exhaustion through protocol abuse
+
+**Adaptive-Slow Attack:**
+- **Mechanism**: Dynamically adjusts timing based on server responses
+- **Impact**: Optimized resource exhaustion with evasion
+- **Learning**: Advanced attack intelligence and adaptation to overcome cloud infrastructure
+  
+## 🖥️ Local Lab Testing
+
+**Deploy and attack servers locally:**
 
 ```bash
-# Choose your attack lab:
-cd zero-window/local && ./run.sh           # Basic HTTP/2 flow control
-cd slow-incremental/local && ./run.sh      # Sustained resource exhaustion  
-cd adaptive-slow/local && ./run.sh         # Advanced attack intelligence
+# Deploy Apache server
+./deploy-server.sh local zero-window
+
+# Launch attack (new terminal)
+./deploy-attack.sh zero-window local --connections 512
+
+# Monitor attack progress
+./deploy-attack.sh zero-window local --logs
+
+# Stop attack
+./deploy-attack.sh zero-window local --stop
 ```
 
-**What happens:**
-1. ✅ Starts Apache server (version-specific per lab)
-2. ✅ Builds attacker container with Python tools
-3. ✅ Shows ready-to-run attack commands
-4. ✅ Monitor with `docker stats`, `curl`, etc.
-
-**Example workflow:**
+**Example Complete Workflow:**
 ```bash
-cd zero-window/local/
-./run.sh                                       # Start environment
+# Deploy zero-window server locally
+./deploy-server.sh local zero-window
 
-# In new terminal - run attack:
-docker exec zero-window-attacker python3 /workspace/shared/scripts/zero_window_attack.py apache-victim --port 80 --connections 512 --verbose
+# Launch attack with 1024 connections  
+./deploy-attack.sh zero-window local --connections 1024
 
-# In another terminal - monitor:
+# Monitor in real-time
+./deploy-attack.sh zero-window local --logs
+
+# Check server status
+./deploy-server.sh local zero-window --status
+
+# Stop everything
+./deploy-attack.sh zero-window local --stop
+./deploy-server.sh local zero-window --stop
+```
+
+## 🌐 GCP Free Tier Lab (Real Internet Testing)
+
+### One-Time Setup
+
+**1. Create GCP Project:**
+- Go to [Google Cloud Console](https://console.cloud.google.com/)
+- Sign in with Google account → Click "Create Project"
+- Enter name like "HTTP2-Lab" → Note the **Project ID**
+
+**2. Setup Infrastructure:**
+```bash
+# In Cloud Shell or local with gcloud CLI:
+gcloud config set project YOUR_PROJECT_ID
+
+# Clone lab (if needed)
+git clone https://github.com/your-repo/DDoS-SEED-Lab.git
+cd DDoS-SEED-Lab/flow-control
+
+# Create GCP infrastructure (one-time setup)
+./setup-gcp.sh
+```
+
+### Real Internet Attack Testing
+
+**Deploy server on GCP, attack from local machine:**
+
+```bash
+# Deploy Apache server to GCP
+./deploy-server.sh gcp zero-window
+
+# Attack from local machine over internet
+./deploy-attack.sh zero-window 35.123.45.67 --connections 512
+
+# Monitor attack progress
+./deploy-attack.sh zero-window 35.123.45.67 --logs
+
+# Stop attack
+./deploy-attack.sh zero-window 35.123.45.67 --stop
+```
+
+**Complete Real Internet Workflow:**
+```bash
+# Setup (one-time)
+./setup-gcp.sh
+
+# Deploy server on GCP
+./deploy-server.sh gcp slow-incremental
+
+# Attack from local over real internet
+./deploy-attack.sh slow-incremental 35.123.45.67 --connections 256
+
+# Compare with local testing
+./deploy-server.sh local slow-incremental  
+./deploy-attack.sh slow-incremental local --connections 256
+```
+
+### Infrastructure Management
+
+```bash
+# Stop GCP server (restartable)
+./deploy-server.sh gcp zero-window --stop
+
+# Completely destroy infrastructure
+./deploy-server.sh gcp zero-window --destruct-vm
+
+# Check server status/logs
+./deploy-server.sh gcp zero-window --status
+./deploy-server.sh gcp zero-window --logs
+```
+
+## 📝 Monitoring & Analysis
+
+### Built-in Monitoring Commands
+
+**Server Status:**
+```bash
+# Check server health and resource usage
+./deploy-server.sh local zero-window --status
+./deploy-server.sh gcp zero-window --status
+
+# View server logs
+./deploy-server.sh local zero-window --logs
+./deploy-server.sh gcp zero-window --logs
+```
+
+**Attack Progress:**
+```bash
+# Monitor attack in real-time
+./deploy-attack.sh zero-window local --logs
+./deploy-attack.sh zero-window 35.123.45.67 --logs
+```
+
+### Manual Monitoring 
+
+**Response Time Testing:**
+```bash
+# Local server response time
+curl -w "Response: %{time_total}s\n" -s -o /dev/null http://localhost/
+
+# GCP server response time (with internet latency)
+curl -w "Response: %{time_total}s\n" -s -o /dev/null http://35.123.45.67/
+```
+
+**Connection Analysis:**
+```bash
+# Active HTTP connections (port 80)
+ss -tuln | grep ':80' | wc -l
+
+# Connection state breakdown
+ss -tuln | grep ':80' | awk '{print $1}' | sort | uniq -c
+
+# Continuous monitoring
+watch -n 5 "ss -tuln | grep ':80' | wc -l"
+```
+
+**Resource Usage:**
+```bash
+# Docker container resources (local)
 docker stats --no-stream
-curl -w "Time: %{time_total}s\n" http://localhost/
-```
 
-**Cleanup:**
-```bash
-docker-compose down
-```
-
-## 🌐 GCP Free Tier Deployment
-
-### Phase 1: One-Time Infrastructure Setup
-
-1. **Create GCP Project**:
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Sign in with Google account (create one if needed)  
-   - Click "Create Project" → Enter name like "HTTP2-Lab" → Note the **Project ID**
-
-2. **Open Cloud Shell**:
-   - Click the **Cloud Shell icon** `>_` in top toolbar
-   - A terminal opens in your browser (all tools pre-installed!)
-
-3. **Setup Infrastructure** (one-time):
-   ```bash
-   # Set your project
-   gcloud config set project YOUR_PROJECT_ID
-   
-   # Clone the lab repository
-   git clone https://github.com/your-username/DDOS-Sandbox.git
-   cd DDOS-Sandbox
-   
-   # Enable required APIs
-   gcloud services enable compute.googleapis.com
-   
-   # Create reusable infrastructure
-   cd shared/gcp
-   ./setup-infrastructure.sh
-   ```
-
-### Phase 2: Deploy Any Attack (Instant)
-
-**After infrastructure exists, deploy any attack instantly:**
-
-```bash
-# Choose your attack lab:
-cd zero-window/gcp && ./deploy-attack.sh           # Basic attack
-cd slow-incremental/gcp && ./deploy-attack.sh      # Sustained attack  
-cd adaptive-slow/gcp && ./deploy-attack.sh         # Advanced attack
-```
-
-**Each deployment automatically:**
-- ✅ Switches Apache version for the attack
-- ✅ Copies attack script to instance
-- ✅ Starts attack automatically
-- ✅ Provides web terminal access
-
-### Access Your Running Lab
-
-**🌐 Web Terminal**: `http://INSTANCE_IP:8080` - Full terminal in browser
-**🎯 Apache Target**: `http://INSTANCE_IP` - See attack impact
-**📊 Live Monitoring**: Use commands from "Live Monitoring Commands" section below
-
-### Switch Between Labs
-
-**No rebuild needed! Switch instantly:**
-```bash
-cd zero-window/gcp && ./deploy-attack.sh        # Switch to Zero Window
-cd slow-incremental/gcp && ./deploy-attack.sh   # Switch to Slow Incremental  
-cd adaptive-slow/gcp && ./deploy-attack.sh      # Switch to Adaptive Slow
-```
-
-**Free Tier Specifications**:
-- **Instance**: f1-micro (always free eligible)
-- **One VM**: Runs all attack types
-- **Storage**: 20GB (of 30GB total allowance)  
-- **Auto-shutdown**: 4 hours (cost control)
-- **Region**: us-central1 (free tier compatible)
-- **No billing account required**
-
-### Cleanup
-```bash
-cd shared/gcp && ./cleanup-infrastructure.sh
-```
-
-## 📊 SEED Lab Methodology
-
-### Lab Objectives
-1. **Understand** HTTP/2 flow control protocol weaknesses
-2. **Implement** three different attack vectors with varying characteristics
-3. **Compare** local vs cloud attack effectiveness and network impact
-4. **Analyze** server resource exhaustion patterns under different conditions
-
-### Performance Comparison Framework
-Each lab includes comprehensive monitoring to compare:
-- **Connection establishment rates** (local network vs internet)
-- **Server response degradation** patterns
-- **Resource utilization** efficiency differences
-- **Attack sustainability** across environments
-- **Network latency impact** on attack success
-
-## 📝 Live Monitoring Commands
-
-### Basic Monitoring (All Labs)
-```bash
-# Container resource usage
-docker stats --no-stream
-
-# Response time test  
-curl -w "Time: %{time_total}s\n" -s -o /dev/null http://localhost/
-
-# Active connections
-ss -tuln | grep :80 | wc -l
-```
-
-### Intermediate Monitoring
-```bash
-# Continuous response monitoring
-while true; do 
-  curl -w "$(date +%H:%M:%S) - Response: %{time_total}s\n" -s -o /dev/null http://localhost/
-  sleep 5
-done
-
-# Resource tracking
-watch -n 10 "echo 'Connections:'; ss -tuln | grep :80 | wc -l; echo 'Memory:'; free -m | grep Mem"
-
-# Attack effectiveness
-docker logs [container-name] | tail -20
-```
-
-### Advanced Monitoring
-```bash
-# Connection state analysis
-ss -tuln | grep :80 | awk '{print $1}' | sort | uniq -c
-
-# Network packet inspection
-tcpdump -i any -n port 80 -c 50
-
-# Apache process monitoring (inside container)
-docker exec [container-name] ps aux | grep httpd
-
-# Detailed connection metrics
-ss -i | grep :80 | head -10
-
-# System load analysis
-uptime && iostat -x 1 3
-```
-
-### GCP Cloud Monitoring
-```bash
-# SSH to GCP instance
-ssh ubuntu@INSTANCE_IP
-
-# Use monitoring commands from the guide below
-# See "📝 Live Monitoring Commands" section
-
-# System resource monitoring
+# System resources (GCP)
+# SSH to instance: gcloud compute ssh http2-lab-infrastructure --zone=us-central1-a
 htop
-
-# Network analysis with cloud latency
-ping -c 10 8.8.8.8
-traceroute google.com
 ```
 
-## 🧹 Cleanup & Safety
-
-### Local Environment
+**Bandwidth Consumption:**
 ```bash
-# In any lab directory
-cd local/
-docker-compose down
-docker system prune -f  # Optional: clean unused containers
+# Monitor network I/O (bytes per second)
+docker stats --no-stream --format "table {{.Name}}\t{{.NetIO}}"
+
+# Track bandwidth usage over time
+watch -n 5 'docker stats --no-stream --format "table {{.Name}}\t{{.NetIO}}"'
 ```
 
-### GCP Environment  
+**Request Rate:**
 ```bash
-# In lab's gcp directory - ALWAYS RUN THIS
-terraform destroy -var="project_id=YOUR_PROJECT_ID" -auto-approve
+# Monitor HTTP/2 flow control requests per second
+docker logs http2-attacker-* | grep -E "(request|window)" | wc -l
 
-# Verify no running instances
-gcloud compute instances list
+# Count active HTTP/2 connections
+docker exec http2-attacker-* sh -c "netstat -an | grep ESTABLISHED | wc -l" 2>/dev/null || echo "0"
 ```
 
-### Emergency GCP Cleanup
+**Error Rates:**
 ```bash
-# If terraform destroy fails, nuclear option:
-gcloud compute instances delete --zone=us-central1-a $(gcloud compute instances list --format="value(name)") --quiet
+# Monitor HTTP/2 protocol errors
+docker logs apache-server | grep -E "(40[0-9]|50[0-9]|HTTP2|ERROR)" | tail -10
+
+# Real-time error monitoring
+docker logs -f apache-server | grep --line-buffered -E "(ERROR|WARN)"
 ```
 
-## ⚠️ Important Notes
+**Thread Pool Depletion:**
+```bash
+# Check Apache worker threads
+docker exec apache-server sh -c "ps aux | grep apache2 | wc -l" 2>/dev/null || echo "0"
 
-### GCP Free Tier Limits
-- **744 hours/month** f1-micro usage (one instance can run continuously)
-- **30GB** persistent disk storage total
-- **1GB** network egress to most regions per month
-- **Auto-shutdown after 2 hours** prevents accidental charges
+# Monitor Apache worker status
+docker exec apache-server sh -c "apache2ctl status" 2>/dev/null || echo "Status module not available"
+```
 
-### Troubleshooting
-- **Docker issues**: Ensure Docker daemon is running
-- **GCP authentication**: Run `gcloud auth login` and set project
-- **Terraform errors**: Check GCP APIs are enabled
-- **Attack not working**: Verify Apache HTTP/2 is enabled with `curl -I --http2`
+**Latency Spikes:**
+```bash
+# Monitor latency distribution
+for i in {1..5}; do curl -w "%{time_total}s\n" -o /dev/null -s http://localhost/; done
+
+# Detect latency anomalies during attacks
+bash -c 'baseline=$(curl -w "%{time_total}" -o /dev/null -s http://localhost/ 2>/dev/null); echo "Baseline: ${baseline}s"; for i in {1..10}; do current=$(curl -w "%{time_total}" -o /dev/null -s http://localhost/ 2>/dev/null); echo "Current: ${current}s"; done'
+```
+
+**Stream Status:**
+```bash
+# Monitor HTTP/2 stream flow control
+docker logs apache-server | grep -E "(stream|flow.*control)" | tail -10
+
+# Track window updates
+docker logs apache-server | grep -i "window" | tail -5
+```
+
+**Average Connection Duration:**
+```bash
+# Monitor connection lifetimes
+docker exec apache-server sh -c "ss -o | grep :80 | head -5" 2>/dev/null || echo "No connections found"
+
+# Track persistent connections
+docker logs apache-server | grep -E "(connection|establish|close)" | tail -5
+```
+
+## 🧹 Stop & Cleanup
+
+### Stop Everything
+```bash
+# Stop local attacks and servers
+./deploy-attack.sh zero-window local --stop
+./deploy-server.sh local zero-window --stop
+
+# Stop GCP attacks and pause server
+./deploy-attack.sh zero-window 35.123.45.67 --stop  
+./deploy-server.sh gcp zero-window --stop
+```
+
+### Complete Infrastructure Removal
+```bash
+# Destroy GCP infrastructure completely
+./deploy-server.sh gcp zero-window --destruct-vm
+
+# Clean local Docker resources
+docker system prune -f
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Attack Won't Start:**
+```bash
+# Check server health first
+curl -I --http2 http://localhost/  # or your GCP IP
+./deploy-server.sh local zero-window --status
+```
+
+**GCP Authentication:**
+```bash
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
+```
+
+**Docker Issues:**
+```bash
+# Restart Docker daemon
+sudo systemctl restart docker
+
+# Clean Docker resources
+docker system prune -f
+```
+
+**Health Check Failures:**
+- Ensure server is fully started (wait 30 seconds after deployment)
+- Check HTTP/2 is enabled: `curl -I --http2 http://target/`
+- Verify firewall allows HTTP traffic (GCP automatically configured)
+
+## 🚀 Quick Command Reference
+
+```bash
+# Help
+./deploy-server.sh --help
+./deploy-attack.sh --help
+
+# Local Lab
+./deploy-server.sh local zero-window
+./deploy-attack.sh zero-window local --connections 512
+
+# GCP Lab  
+./setup-gcp.sh
+./deploy-server.sh gcp zero-window
+./deploy-attack.sh zero-window 35.123.45.67 --connections 512
+
+# Monitor & Stop
+./deploy-attack.sh zero-window local --logs
+./deploy-attack.sh zero-window local --stop
+./deploy-server.sh gcp zero-window --destruct-vm
+```
 
 ## 📚 References & Further Reading
 
+### Protocol Documentation
 - [RFC 7540: HTTP/2 Specification](https://tools.ietf.org/html/rfc7540)
-- [HTTP/2 Flow Control Mechanisms](https://tools.ietf.org/html/rfc7540#section-6.9)
+- [HTTP/2 Flow Control Mechanisms](https://tools.ietf.org/html/rfc7540#section-6.9) 
 - [Apache HTTP/2 Module Documentation](https://httpd.apache.org/docs/2.4/mod/mod_http2.html)
+
+### Cloud & Infrastructure
 - [GCP Free Tier Documentation](https://cloud.google.com/free/docs/gcp-free-tier)
+- [Google Cloud CLI Reference](https://cloud.google.com/sdk/gcloud/reference)
+
+

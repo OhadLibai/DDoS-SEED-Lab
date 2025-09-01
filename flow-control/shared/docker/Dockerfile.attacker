@@ -10,18 +10,15 @@ RUN apt-get update && apt-get install -y \
     procps \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Python HTTP/2 dependencies
+RUN pip install --no-cache-dir \
+    h2 \
+    requests \
+    colorama \
+    pyfiglet
+
 # Set working directory
 WORKDIR /workspace
-
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy attack scripts and monitoring
-COPY zero_window_attack.py slow_inc_window_attack.py adv_slow_inc_window_attack.py ./
-
-# Make scripts executable
-RUN chmod +x zero_window_attack.py slow_inc_window_attack.py adv_slow_inc_window_attack.py
 
 # Default command
 CMD ["/bin/bash"]

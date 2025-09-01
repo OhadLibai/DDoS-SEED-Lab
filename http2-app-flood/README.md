@@ -195,6 +195,94 @@ docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
 gcloud compute ssh http2-flood-lab --zone=us-central1-a --command="docker stats --no-stream"
 ```
 
+#### Bandwidth Consumption
+```bash
+# Monitor network I/O (bytes per second)
+docker stats --no-stream --format "table {{.Name}}\t{{.NetIO}}"
+
+# Track bandwidth usage over time
+watch -n 5 'docker stats --no-stream --format "table {{.Name}}\t{{.NetIO}}"'
+
+# GCP bandwidth monitoring
+gcloud compute ssh http2-flood-lab --zone=us-central1-a --command="docker stats --no-stream --format 'table {{.Name}}\t{{.NetIO}}'"
+```
+
+#### Request Rate
+```bash
+# Monitor HTTP/2 requests per second
+docker logs -f http2-flood-*-attack | grep -c "request" &
+sleep 10; kill $!
+
+# Count active HTTP/2 streams
+docker exec dev-victim-server sh -c "netstat -an | grep :8080 | grep ESTABLISHED | wc -l"
+
+# Monitor request patterns
+docker logs http2-flood-*-attack | grep -E "(stream|request)" | tail -20
+```
+
+#### Error Rates
+```bash
+# Monitor HTTP error responses
+docker logs dev-victim-server | grep -E "(40[0-9]|50[0-9])" | tail -20
+docker logs prod-victim-server | grep -E "(40[0-9]|50[0-9])" | tail -20
+
+# Real-time error monitoring
+docker logs -f dev-victim-server | grep --line-buffered -E "(ERROR|WARN)"
+
+# HTTP/2 specific errors
+docker logs -f dev-victim-server | grep --line-buffered -i "http2"
+```
+
+#### Thread Pool Depletion
+```bash
+# Check server thread status
+docker exec dev-victim-server sh -c "ps aux | grep python | wc -l"
+docker exec prod-victim-server sh -c "ps aux | grep python | wc -l"
+
+# Monitor worker processes
+docker exec dev-victim-server sh -c "pgrep -f 'python.*server' | wc -l"
+
+# Check uvicorn workers (for production)
+docker exec prod-victim-server sh -c "ps aux | grep uvicorn"
+```
+
+#### Latency Spikes
+```bash
+# Monitor latency distribution
+for i in {1..10}; do curl -w "%{time_total}s\n" -o /dev/null -s http://localhost:8080; done
+
+# Detect latency anomalies
+bash -c 'baseline=$(curl -w "%{time_total}" -o /dev/null -s http://localhost:8080 2>/dev/null); echo "Baseline: ${baseline}s"; while true; do current=$(curl -w "%{time_total}" -o /dev/null -s http://localhost:8080 2>/dev/null); if (( $(echo "$current > $baseline * 3" | bc -l) )); then echo "SPIKE: ${current}s ($(date))"; fi; sleep 1; done'
+
+# HTTP/2 specific latency monitoring
+curl --http2-prior-knowledge -w "H2-Time:%{time_total}s\n" -o /dev/null -s http://localhost:8080
+```
+
+#### Stream Status
+```bash
+# Monitor HTTP/2 stream multiplexing
+docker logs dev-victim-server | grep -E "(stream|multiplex)" | tail -10
+
+# Track concurrent streams
+docker exec dev-victim-server sh -c "netstat -an | grep ':8080.*ESTABLISHED' | wc -l"
+
+# Monitor HTTP/2 connection reuse
+docker logs -f dev-victim-server | grep --line-buffered -E "(connection.*reuse|stream.*[0-9]+)"
+```
+
+#### Average Connection Duration
+```bash
+# Monitor connection lifetimes
+docker exec dev-victim-server sh -c "ss -o | grep :8080 | awk '{print \$6}' | grep -o 'timer:[^,]*'"
+docker exec prod-victim-server sh -c "ss -o | grep :8080 | awk '{print \$6}' | grep -o 'timer:[^,]*'"
+
+# Track HTTP/2 persistent connections
+docker logs dev-victim-server | grep -E "(connection.*establish|connection.*close)" | tail -10
+
+# Monitor connection pool statistics
+docker logs -f dev-victim-server | grep --line-buffered -E "(pool|connection.*duration)"
+```
+
 #### Service Availability Testing
 ```bash
 # Health check

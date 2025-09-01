@@ -1,0 +1,21 @@
+services:
+  apache-victim:
+    image: httpd:2.4.62
+    container_name: http2-apache-slow-incremental
+    ports:
+      - "80:80"
+    volumes:
+      - ../../shared/docker/apache-html/html:/usr/local/apache2/htdocs
+    command: >
+      sh -c "sed -i 's/#LoadModule http2_module/LoadModule http2_module/' /usr/local/apache2/conf/httpd.conf &&
+             grep -q 'Protocols h2 h2c http/1.1' /usr/local/apache2/conf/httpd.conf || echo 'Protocols h2 h2c http/1.1' >> /usr/local/apache2/conf/httpd.conf &&
+             httpd-foreground"
+    restart: unless-stopped
+    labels:
+      - "lab.attack=slow-incremental"
+      - "lab.apache.version=2.4.62"
+
+networks:
+  default:
+    name: http2-flow-control-lab
+    driver: bridge
