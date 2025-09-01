@@ -1,6 +1,6 @@
 # CPU-Intensive Scenario Implementations
 
-This directory (`shared/scenarios/`) contains six realistic CPU-intensive scenarios that can replace the `simulate_proof_of_work` function in the HTTP/2 Flood Attack Lab. Each scenario represents real-world services that legitimately perform heavy computation for unauthenticated users.
+This directory (`shared/scenarios/`) contains six realistic CPU-intensive scenarios that can replace the `simulate_default_cpu_work` function in the HTTP/2 Flood Attack Lab. Each scenario represents real-world services that legitimately perform heavy computation for unauthenticated users.
 
 These scenarios are automatically available to the victim application (`shared/victim_app.py`) through environment variable configuration.
 
@@ -33,7 +33,7 @@ result = captcha_challenge("audio", complexity=4)
 **Real-world use case**: Services implement computational challenges to prevent bot attacks.
 
 **CPU-intensive operations**:
-- Proof-of-work challenges with configurable DIFFICULITY
+- Proof-of-work challenges with configurable WORKLOAD
 - Image classification simulation ("Select all traffic lights")
 - Adaptive computational puzzles that scale with request frequency
 - Prime factorization, Fibonacci calculations, matrix operations
@@ -43,13 +43,13 @@ result = captcha_challenge("audio", complexity=4)
 from scenarios.antibot_scenario import antibot_challenge
 
 # Proof-of-work challenge
-result = antibot_challenge("proof_of_work", DIFFICULITY=4)
+result = antibot_challenge("proof_of_work", WORKLOAD=4)
 
 # Image classification challenge
 result = antibot_challenge("image_classification")
 
 # Adaptive puzzle that scales with requests
-result = antibot_challenge("adaptive_puzzle", DIFFICULITY=3, request_count=50)
+result = antibot_challenge("adaptive_puzzle", WORKLOAD=3, request_count=50)
 ```
 
 ### 3. Content Preview/Search (`content_preview_scenario.py`)
@@ -138,13 +138,13 @@ result = webservice_challenge("translation", "Hello world how are you?")
 from scenarios.gaming_scenario import gaming_challenge
 
 # Generate Sudoku puzzle
-result = gaming_challenge("sudoku", DIFFICULITY=4)
+result = gaming_challenge("sudoku", WORKLOAD=4)
 
 # Create random maze
-result = gaming_challenge("maze", DIFFICULITY=3, size=50)
+result = gaming_challenge("maze", WORKLOAD=3, size=50)
 
 # Generate procedural content
-result = gaming_challenge("procedural", DIFFICULITY=2, size=30)
+result = gaming_challenge("procedural", WORKLOAD=2, size=30)
 
 # Matchmaking simulation
 result = gaming_challenge("matchmaking", size=100)
@@ -158,7 +158,7 @@ The scenarios are automatically integrated with the victim application (`shared/
 ```bash
 # Deploy with specific scenarios
 SCENARIO=captcha ./local-deploy.sh part-A
-SCENARIO=crypto DIFFICULITY=4 ./gcp-deploy.sh part-B
+SCENARIO=crypto WORKLOAD=4 ./gcp-deploy.sh part-B
 SCENARIO=gaming ./local-deploy.sh part-B
 ```
 
@@ -168,10 +168,10 @@ SCENARIO=gaming ./local-deploy.sh part-B
 # In shared/victim_app.py - scenarios are loaded dynamically:
 if SCENARIO == "captcha":
     from scenarios.captcha_scenario import captcha_challenge
-    result = captcha_challenge("visual", DIFFICULITY)
+    result = captcha_challenge("visual", WORKLOAD)
 elif SCENARIO == "crypto":
     from scenarios.crypto_scenario import cryptographic_challenge  
-    result = cryptographic_challenge("diffie_hellman", DIFFICULITY)
+    result = cryptographic_challenge("diffie_hellman", WORKLOAD)
 ```
 
 ### Multiple Endpoints
@@ -190,7 +190,7 @@ def captcha_endpoint():
 ```python
 @app.route('/adaptive')
 def adaptive_endpoint():
-    # Scale DIFFICULITY based on request frequency
+    # Scale WORKLOAD based on request frequency
     complexity = min(5, 2 + (request_count // 20))
     result = antibot_challenge("adaptive_puzzle", complexity, request_count)
     return {"status": "success", "result": result}
@@ -209,35 +209,12 @@ Scenario dependency breakdown:
 - **Cryptographic scenarios**: Require `cryptography` for secure operations  
 - **Other scenarios**: Use only Python standard library (antibot, gaming, webservice)
 
-## Performance Characteristics
-
-Each scenario is designed to be CPU-intensive while remaining realistic:
-
-- **CAPTCHA**: 0.1-2 seconds per request depending on complexity
-- **Anti-Bot**: 0.05-5 seconds based on proof-of-work DIFFICULITY
-- **Content**: 0.2-3 seconds for search/preview generation
-- **Crypto**: 0.1-10 seconds for key operations
-- **Web Services**: 0.3-5 seconds for complex service simulation
-- **Gaming**: 0.1-8 seconds for procedural generation
-
-## Defensive Security Focus
-
-All scenarios implement **defensive security measures only**:
-- ✅ CAPTCHA generation for bot prevention
-- ✅ Anti-abuse computational challenges
-- ✅ Legitimate content processing
-- ✅ Standard cryptographic operations
-- ✅ Real-world service simulation
-- ✅ Gaming content generation
-
-❌ **No offensive capabilities or malicious code generation**
-
 ## Choosing a Scenario
 
 Select based on your testing needs:
 
 - **CAPTCHA**: Test image processing and visual challenge handling
-- **Anti-Bot**: Test adaptive DIFFICULITY and proof-of-work systems
+- **Anti-Bot**: Test adaptive WORKLOAD and proof-of-work systems
 - **Content**: Test search performance and media processing
 - **Crypto**: Test cryptographic operation handling
 - **Web Services**: Test real-world API simulation

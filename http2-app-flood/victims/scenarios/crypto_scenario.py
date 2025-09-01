@@ -1,6 +1,8 @@
 # scenarios/crypto_scenario.py
 
 import hashlib
+import hmac
+import math
 import random
 import time
 import os
@@ -61,8 +63,9 @@ def generate_large_prime(byte_length):
         if candidate % 2 == 0:
             candidate += 1
         
-        # Test for primality
-        if miller_rabin_test(candidate, 20):  # 20 rounds for high confidence
+        # Test for primality - scale rounds based on key size for better performance
+        rounds = min(20, max(3, byte_length // 8))  # 3-20 rounds based on key size
+        if miller_rabin_test(candidate, rounds):
             return candidate
 
 def miller_rabin_test(n, k):
@@ -100,37 +103,27 @@ def miller_rabin_test(n, k):
 
 def find_primitive_root(p):
     """
-    Find a primitive root modulo p (CPU-intensive).
+    Find a primitive root modulo p (optimized for performance).
     """
     if p == 2:
         return 1
     
-    # Find prime factors of p-1
+    # For performance, use a simplified approach with small candidates
+    # This is sufficient for educational purposes
+    candidates = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71]
     phi = p - 1
-    prime_factors = []
-    n = phi
     
-    for i in range(2, int(n**0.5) + 1):
-        if n % i == 0:
-            prime_factors.append(i)
-            while n % i == 0:
-                n //= i
-    if n > 1:
-        prime_factors.append(n)
-    
-    # Test candidates for primitive root
-    for g in range(2, p):
-        is_primitive = True
-        for factor in prime_factors:
-            if pow(g, phi // factor, p) == 1:
-                is_primitive = False
-                break
-        if is_primitive:
+    for g in candidates:
+        if g >= p:
+            continue
+        # Quick primality test: if g^((p-1)/2) != 1 (mod p), likely primitive
+        if pow(g, phi // 2, p) != 1:
             return g
     
-    return 2  # Fallback
+    # If no small candidate works, return 2 as safe fallback
+    return 2
 
-async def certificate_validation_chain(chain_length=5):
+async def certificate_validation_chain(chain_length=5, complexity=1):
     """
     Simulate CPU-intensive certificate chain validation.
     """
@@ -145,7 +138,7 @@ async def certificate_validation_chain(chain_length=5):
         key_generation_start = time.time()
         private_key = rsa.generate_private_key(
             public_exponent=65537,
-            key_size=2048
+            key_size=1024
         )
         public_key = private_key.public_key()
         key_generation_time = time.time() - key_generation_start
@@ -156,7 +149,7 @@ async def certificate_validation_chain(chain_length=5):
             "subject": f"CN=Certificate-{i}",
             "issuer": f"CN=Certificate-{i-1}" if i > 0 else "CN=Root-CA",
             "serial_number": random.randint(1000000, 9999999),
-            "key_size": 2048,
+            "key_size": 1024,
             "public_key": public_key,
             "private_key": private_key if i == chain_length - 1 else None  # Only leaf cert
         }
@@ -234,7 +227,7 @@ async def certificate_validation_chain(chain_length=5):
         
         for check in validation_checks:
             # Simulate CPU work for each validation step
-            for _ in range(1000):
+            for _ in range(100 * complexity):
                 validation_work = random.randint(1, 100)
         
         if not current_cert.get("signature_valid", False):
@@ -265,7 +258,7 @@ async def certificate_validation_chain(chain_length=5):
         "operations_performed": ["key_generation", "digital_signatures", "chain_validation"]
     }
 
-async def ssl_tls_handshake_simulation():
+async def ssl_tls_handshake_simulation(complexity=1):
     """
     Simulate CPU-intensive SSL/TLS handshake computations.
     """
@@ -273,9 +266,11 @@ async def ssl_tls_handshake_simulation():
     
     # 1. Certificate generation (CPU-intensive)
     cert_start = time.time()
+    # Scale RSA key size with complexity for better performance
+    rsa_key_size = 1024 + (complexity * 512)  # 1024-3072 bits based on complexity
     server_private_key = rsa.generate_private_key(
         public_exponent=65537,
-        key_size=2048
+        key_size=rsa_key_size
     )
     server_public_key = server_private_key.public_key()
     cert_generation_time = time.time() - cert_start
@@ -318,7 +313,7 @@ async def ssl_tls_handshake_simulation():
     
     # Simulate TLS PRF (Pseudo-Random Function)
     seed = b"master secret" + client_random + server_random
-    master_secret = pbkdf2_hmac_custom(pre_master_secret, seed, 10000, 48)
+    master_secret = pbkdf2_hmac_custom(pre_master_secret, seed, 1000, 48)
     
     master_secret_time = time.time() - master_secret_start
     
@@ -342,7 +337,7 @@ async def ssl_tls_handshake_simulation():
     mac_start = time.time()
     
     handshake_messages = b"ClientHello" + b"ServerHello" + b"Certificate" + b"ServerKeyExchange"
-    finished_mac = hashlib.hmac.new(
+    finished_mac = hmac.new(
         client_mac_key,
         handshake_messages,
         hashlib.sha256
@@ -356,7 +351,7 @@ async def ssl_tls_handshake_simulation():
         "protocol": "TLS 1.2 Handshake Simulation",
         "key_exchange": "RSA",
         "cipher_suite": "TLS_RSA_WITH_AES_128_CBC_SHA256",
-        "server_key_size": 2048,
+        "server_key_size": rsa_key_size,
         "client_random": client_random.hex(),
         "server_random": server_random.hex(),
         "master_secret": master_secret.hex(),
@@ -389,14 +384,14 @@ def pbkdf2_hmac_custom(password, salt, iterations, key_length):
         u = salt + i.to_bytes(4, 'big')
         
         for _ in range(iterations):
-            u = hashlib.hmac.new(password, u, hashlib.sha256).digest()
+            u = hmac.new(password, u, hashlib.sha256).digest()
         
         result += u
         i += 1
     
     return result[:key_length]
 
-async def session_token_generation(entropy_bits=256, token_count=10):
+async def session_token_generation(entropy_bits=256, token_count=10, complexity=1):
     """
     Generate cryptographically secure session tokens with high entropy.
     CPU-intensive random number generation and entropy collection.
@@ -422,7 +417,7 @@ async def session_token_generation(entropy_bits=256, token_count=10):
         
         # Process-based entropy (CPU-intensive)
         process_entropy = b""
-        for _ in range(1000):
+        for _ in range(100 * complexity):
             process_value = random.randint(0, 2**32 - 1)
             process_entropy += hashlib.sha256(str(process_value).encode()).digest()
         entropy_sources.append(process_entropy[:32])
@@ -430,11 +425,12 @@ async def session_token_generation(entropy_bits=256, token_count=10):
         # Combine entropy sources
         combined_entropy = b"".join(entropy_sources)
         
-        # Apply key stretching (CPU-intensive)
+        # Apply key stretching (CPU-intensive) - scale with complexity
+        iterations = 1000 + (complexity * 2000)  # 1000-11000 iterations based on complexity
         stretched_key = pbkdf2_hmac_custom(
             combined_entropy,
             b"session_token_salt",
-            10000,
+            iterations,
             64
         )
         
@@ -468,24 +464,25 @@ async def session_token_generation(entropy_bits=256, token_count=10):
 
 async def cryptographic_challenge(operation="diffie_hellman", complexity=2, count=1):
     """
-    Main function to replace simulate_proof_of_work.
+    Main function to replace simulate_default_cpu_work.
     Provides various CPU-intensive cryptographic operations.
     """
     if operation == "diffie_hellman":
-        key_size = 1024 + (complexity * 512)  # Scale key size with complexity
+        # Scale key size more reasonably for low workloads
+        key_size = 256 + (complexity * 256)
         return await diffie_hellman_key_exchange(key_size)
         
     elif operation == "certificate_chain":
         chain_length = max(3, complexity * 2)
-        return await certificate_validation_chain(chain_length)
+        return await certificate_validation_chain(chain_length, complexity)
         
     elif operation == "tls_handshake":
-        return await ssl_tls_handshake_simulation()
+        return await ssl_tls_handshake_simulation(complexity)
         
     elif operation == "session_tokens":
         entropy_bits = 128 + (complexity * 64)
         token_count = max(1, count)
-        return await session_token_generation(entropy_bits, token_count)
+        return await session_token_generation(entropy_bits, token_count, complexity)
         
     else:
         # Default to Diffie-Hellman

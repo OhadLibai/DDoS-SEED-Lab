@@ -1,0 +1,7 @@
+# HTTP/2 Flood Lab - Attack Client Requirements
+
+# HTTP/2 client for attacks
+httpx[http2]==0.28.1
+
+# Standard library dependencies for attack scripts
+# (no additional packages needed for basic and advanced attacks)

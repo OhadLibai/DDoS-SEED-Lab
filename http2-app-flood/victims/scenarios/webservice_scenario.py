@@ -387,7 +387,7 @@ async def weather_data_processing(location="New York", forecast_days=7):
             "pressure": pressure_base + pressure_variation,
             "humidity": min(100, max(0, humidity_factor * 100 + random.gauss(0, 15))),
             "wind_speed": max(0, wind_pattern + random.gauss(0, 3)),
-            "precipitation": max(0, random.exponential(2) - 1)
+            "precipitation": max(0, random.expovariate(0.5) - 1)
         })
     
     # Perform statistical analysis on historical data (CPU-intensive)
@@ -680,7 +680,7 @@ def apply_grammar_rules(sentence_tokens, target_lang):
 
 async def webservice_challenge(service="weather", location_or_query="New York", complexity=2):
     """
-    Main function to replace simulate_proof_of_work.
+    Main function to replace simulate_default_cpu_work.
     Provides various real-world CPU-intensive web services.
     """
     if service == "map_tiles":

@@ -6,7 +6,7 @@ import hashlib
 import asyncio
 from collections import deque
 
-async def generate_sudoku_puzzle(DIFFICULITY=3):
+async def generate_sudoku_puzzle(WORKLOAD=3):
     """
     Generate a Sudoku puzzle with CPU-intensive solving and validation.
     """
@@ -18,9 +18,9 @@ async def generate_sudoku_puzzle(DIFFICULITY=3):
     # Fill grid with valid solution (CPU-intensive)
     fill_grid_recursively(grid)
     
-    # Create puzzle by removing numbers based on DIFFICULITY
+    # Create puzzle by removing numbers based on WORKLOAD
     puzzle = [row[:] for row in grid]  # Copy solution
-    cells_to_remove = 20 + (DIFFICULITY * 15)  # More removals for higher DIFFICULITY
+    cells_to_remove = 20 + (WORKLOAD * 15)  # More removals for higher WORKLOAD
     
     removed_count = 0
     attempts = 0
@@ -52,7 +52,7 @@ async def generate_sudoku_puzzle(DIFFICULITY=3):
     
     return {
         "game": "Sudoku Generation",
-        "DIFFICULITY_level": DIFFICULITY,
+        "WORKLOAD_level": WORKLOAD,
         "puzzle": puzzle,
         "solution": grid,
         "cells_removed": removed_count,
@@ -312,6 +312,261 @@ async def generate_procedural_content(content_type="dungeon", size=20, complexit
         return generate_quest_chain(complexity, start_time)
     else:
         return generate_dungeon(size, complexity, start_time)
+
+def generate_quest_chain(complexity, start_time):
+    """
+    Generate a complex quest chain with dependencies (CPU-intensive).
+    """
+    quests = []
+    quest_types = ["fetch", "kill", "escort", "puzzle", "exploration", "crafting"]
+    locations = ["forest", "dungeon", "city", "mountains", "ruins", "castle"]
+    
+    # Generate main quest line
+    main_quest_count = complexity + 2
+    
+    for i in range(main_quest_count):
+        quest_id = f"main_{i+1}"
+        quest_type = random.choice(quest_types)
+        location = random.choice(locations)
+        
+        # Calculate quest difficulty (CPU-intensive)
+        difficulty_factors = []
+        for _ in range(complexity * 10):
+            factor = random.uniform(0.5, 2.0)
+            # Complex calculation to simulate AI difficulty balancing
+            adjusted_factor = factor * (1 + 0.1 * complexity)
+            difficulty_factors.append(adjusted_factor)
+        
+        base_difficulty = sum(difficulty_factors) / len(difficulty_factors)
+        
+        # Generate quest rewards (CPU-intensive calculation)
+        reward_calculation_iterations = complexity * 50
+        experience_points = 0
+        gold_reward = 0
+        
+        for _ in range(reward_calculation_iterations):
+            experience_points += random.randint(1, 10) * base_difficulty
+            gold_reward += random.randint(5, 50) * base_difficulty
+        
+        # Normalize rewards
+        experience_points = int(experience_points / reward_calculation_iterations * 100)
+        gold_reward = int(gold_reward / reward_calculation_iterations * 10)
+        
+        quest = {
+            "id": quest_id,
+            "type": quest_type,
+            "name": f"{quest_type.title()} Quest in {location.title()}",
+            "location": location,
+            "difficulty": base_difficulty,
+            "prerequisites": [f"main_{i}"] if i > 0 else [],
+            "rewards": {
+                "experience": experience_points,
+                "gold": gold_reward
+            },
+            "estimated_completion_time": int(base_difficulty * 10)
+        }
+        quests.append(quest)
+    
+    # Generate side quests (CPU-intensive dependency analysis)
+    side_quest_count = complexity * 2
+    
+    for i in range(side_quest_count):
+        quest_id = f"side_{i+1}"
+        quest_type = random.choice(quest_types)
+        location = random.choice(locations)
+        
+        # Complex dependency calculation
+        dependency_options = [q["id"] for q in quests if random.random() < 0.3]
+        prerequisites = dependency_options[:random.randint(0, min(2, len(dependency_options)))]
+        
+        # CPU-intensive reward balancing
+        reward_multiplier = 1.0
+        for _ in range(complexity * 20):
+            reward_multiplier *= random.uniform(0.95, 1.05)
+        
+        side_quest = {
+            "id": quest_id,
+            "type": quest_type,
+            "name": f"Side Quest: {quest_type.title()} in {location.title()}",
+            "location": location,
+            "difficulty": random.uniform(0.5, 1.5) * complexity,
+            "prerequisites": prerequisites,
+            "rewards": {
+                "experience": int(50 * reward_multiplier),
+                "gold": int(25 * reward_multiplier)
+            },
+            "estimated_completion_time": random.randint(5, 20)
+        }
+        quests.append(side_quest)
+    
+    # Calculate quest chain statistics (CPU-intensive)
+    total_experience = sum(q["rewards"]["experience"] for q in quests)
+    total_gold = sum(q["rewards"]["gold"] for q in quests)
+    total_time = sum(q["estimated_completion_time"] for q in quests)
+    
+    # Generate completion paths (CPU-intensive pathfinding)
+    completion_paths = generate_quest_completion_paths(quests)
+    
+    end_time = time.time()
+    
+    return {
+        "content_type": "Quest Chain Generation",
+        "complexity_level": complexity,
+        "total_quests": len(quests),
+        "main_quests": main_quest_count,
+        "side_quests": side_quest_count,
+        "quest_details": quests,
+        "total_rewards": {
+            "experience": total_experience,
+            "gold": total_gold
+        },
+        "estimated_total_time": total_time,
+        "completion_paths": completion_paths,
+        "generation_time": end_time - start_time,
+        "algorithms_used": ["dependency_analysis", "reward_balancing", "pathfinding"],
+        "operations_performed": ["quest_generation", "difficulty_calculation", "path_optimization"]
+    }
+
+def generate_quest_completion_paths(quests):
+    """
+    Generate optimal quest completion paths (CPU-intensive).
+    """
+    paths = []
+    
+    # Build dependency graph
+    quest_map = {q["id"]: q for q in quests}
+    
+    # Find all possible completion orders (CPU-intensive)
+    def find_completion_order(remaining_quests, completed_quests, current_path):
+        if not remaining_quests:
+            paths.append(current_path.copy())
+            return
+        
+        available_quests = []
+        for quest in remaining_quests:
+            prerequisites_met = all(prereq in completed_quests for prereq in quest["prerequisites"])
+            if prerequisites_met:
+                available_quests.append(quest)
+        
+        for quest in available_quests:
+            new_remaining = [q for q in remaining_quests if q["id"] != quest["id"]]
+            new_completed = completed_quests + [quest["id"]]
+            new_path = current_path + [quest["id"]]
+            
+            find_completion_order(new_remaining, new_completed, new_path)
+    
+    # Start pathfinding
+    find_completion_order(quests, [], [])
+    
+    # Limit paths to prevent excessive computation
+    return paths[:10] if len(paths) > 10 else paths
+
+def generate_terrain(size, complexity, start_time):
+    """
+    Generate procedural terrain using Perlin noise simulation (CPU-intensive).
+    """
+    # Initialize terrain grid
+    terrain = [[0.0 for _ in range(size)] for _ in range(size)]
+    
+    # Generate multiple octaves of noise (CPU-intensive)
+    octaves = complexity + 2
+    
+    for octave in range(octaves):
+        frequency = 2 ** octave
+        amplitude = 1.0 / (2 ** octave)
+        
+        # Generate noise for this octave
+        for y in range(size):
+            for x in range(size):
+                # Simple noise generation (CPU-intensive)
+                noise_value = 0.0
+                
+                # Multiple iterations for smoother noise
+                for i in range(complexity * 5):
+                    sample_x = x * frequency / size + i * 0.1
+                    sample_y = y * frequency / size + i * 0.1
+                    
+                    # Pseudo-random noise calculation
+                    noise_component = (
+                        random.uniform(-1, 1) * 
+                        abs(sample_x - int(sample_x)) * 
+                        abs(sample_y - int(sample_y))
+                    )
+                    noise_value += noise_component
+                
+                terrain[y][x] += (noise_value / (complexity * 5)) * amplitude
+    
+    # Normalize terrain values
+    max_height = max(max(row) for row in terrain)
+    min_height = min(min(row) for row in terrain)
+    height_range = max_height - min_height
+    
+    if height_range > 0:
+        for y in range(size):
+            for x in range(size):
+                terrain[y][x] = (terrain[y][x] - min_height) / height_range
+    
+    # Generate terrain features (CPU-intensive)
+    features = generate_terrain_features(terrain, complexity)
+    
+    end_time = time.time()
+    
+    return {
+        "content_type": "Procedural Terrain",
+        "size": size,
+        "complexity_level": complexity,
+        "octaves_generated": octaves,
+        "terrain_data": terrain,
+        "terrain_features": features,
+        "height_statistics": {
+            "min_height": min_height,
+            "max_height": max_height,
+            "height_range": height_range
+        },
+        "generation_time": end_time - start_time,
+        "algorithms_used": ["perlin_noise_simulation", "multi_octave_generation", "feature_detection"],
+        "operations_performed": ["noise_generation", "terrain_analysis", "feature_placement"]
+    }
+
+def generate_terrain_features(terrain, complexity):
+    """
+    Analyze terrain and place features (CPU-intensive).
+    """
+    size = len(terrain)
+    features = []
+    
+    # Detect peaks and valleys (CPU-intensive analysis)
+    for y in range(1, size - 1):
+        for x in range(1, size - 1):
+            current_height = terrain[y][x]
+            
+            # Check neighboring heights
+            neighbors = [
+                terrain[y-1][x-1], terrain[y-1][x], terrain[y-1][x+1],
+                terrain[y][x-1],                    terrain[y][x+1],
+                terrain[y+1][x-1], terrain[y+1][x], terrain[y+1][x+1]
+            ]
+            
+            avg_neighbor_height = sum(neighbors) / len(neighbors)
+            height_diff = current_height - avg_neighbor_height
+            
+            # Classify terrain features
+            if height_diff > 0.1:  # Peak
+                features.append({
+                    "type": "peak",
+                    "position": (x, y),
+                    "height": current_height,
+                    "prominence": height_diff
+                })
+            elif height_diff < -0.1:  # Valley
+                features.append({
+                    "type": "valley",
+                    "position": (x, y),
+                    "height": current_height,
+                    "depth": -height_diff
+                })
+    
+    return features
 
 def generate_dungeon(size, complexity, start_time):
     """
@@ -605,13 +860,13 @@ def calculate_match_statistics(players):
         "match_quality": match_quality
     }
 
-async def gaming_challenge(game_type="sudoku", DIFFICULITY=3, size=20):
+async def gaming_challenge(game_type="sudoku", WORKLOAD=3, size=20):
     """
-    Main function to replace simulate_proof_of_work.
+    Main function to replace simulate_default_cpu_work.
     Provides various CPU-intensive gaming and entertainment scenarios.
     """
     if game_type == "sudoku":
-        return await generate_sudoku_puzzle(DIFFICULITY)
+        return await generate_sudoku_puzzle(WORKLOAD)
         
     elif game_type == "maze":
         maze_size = max(20, size)
@@ -620,7 +875,7 @@ async def gaming_challenge(game_type="sudoku", DIFFICULITY=3, size=20):
     elif game_type == "procedural":
         content_types = ["dungeon", "terrain", "quest"]
         content_type = random.choice(content_types)
-        return await generate_procedural_content(content_type, size, DIFFICULITY)
+        return await generate_procedural_content(content_type, size, WORKLOAD)
         
     elif game_type == "matchmaking":
         player_count = max(50, size * 5)
@@ -628,4 +883,4 @@ async def gaming_challenge(game_type="sudoku", DIFFICULITY=3, size=20):
         
     else:
         # Default to Sudoku
-        return await generate_sudoku_puzzle(DIFFICULITY)
+        return await generate_sudoku_puzzle(WORKLOAD)

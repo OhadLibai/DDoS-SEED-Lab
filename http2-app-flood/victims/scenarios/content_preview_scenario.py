@@ -12,21 +12,21 @@ from collections import defaultdict
 SAMPLE_DOCUMENTS = [
     {"id": i, "title": f"Document {i}", "content": ' '.join([
         ''.join(random.choices(string.ascii_lowercase + ' ', k=random.randint(50, 200)))
-        for _ in range(random.randint(10, 50))
+        for _ in range(random.randint(10, 25))
     ]), "category": random.choice(["technology", "science", "business", "health", "education"])}
-    for i in range(10000)
-]
-
-SAMPLE_IMAGES = [
-    {"id": i, "filename": f"image_{i}.jpg", "width": random.randint(100, 4000), 
-     "height": random.randint(100, 4000), "size_bytes": random.randint(50000, 10000000)}
     for i in range(5000)
 ]
 
+SAMPLE_IMAGES = [
+    {"id": i, "filename": f"image_{i}.jpg", "width": random.randint(100, 2000), 
+     "height": random.randint(100, 2000), "size_bytes": random.randint(50000, 5000000)}
+    for i in range(2500)
+]
+
 SAMPLE_VIDEOS = [
-    {"id": i, "filename": f"video_{i}.mp4", "duration": random.randint(30, 3600),
-     "resolution": random.choice(["720p", "1080p", "4K"]), "size_bytes": random.randint(1000000, 1000000000)}
-    for i in range(1000)
+    {"id": i, "filename": f"video_{i}.mp4", "duration": random.randint(30, 1800),
+     "resolution": random.choice(["720p", "1080p", "4K"]), "size_bytes": random.randint(1000000, 500000000)}
+    for i in range(500)
 ]
 
 async def full_text_search(query, max_results=50):
@@ -189,7 +189,7 @@ async def generate_image_thumbnail(image_id, width=150, height=150):
     
     # 3. Image optimization (CPU-intensive)
     compression_work = 0
-    for _ in range(1000):  # Simulate compression algorithm work
+    for _ in range(500): # Simulate compression algorithm work
         compression_work += random.randint(1, 100)
     
     # 4. Format conversion simulation
@@ -241,7 +241,7 @@ async def generate_video_preview(video_id, preview_duration=30):
     for i in range(preview_frames):
         # Simulate content analysis for each frame
         content_score = 0
-        for _ in range(500):  # Analyze 500 regions per frame
+        for _ in range(250):  # Analyze 250 regions per frame
             # Simulate edge detection, color analysis, etc.
             edge_value = random.randint(0, 255)
             color_value = random.randint(0, 255)
@@ -359,7 +359,7 @@ async def generate_pdf_preview(document_text, page_count=None):
 
 async def content_preview_challenge(content_type="search", query_or_id="", complexity=2):
     """
-    Main function to replace simulate_proof_of_work.
+    Main function to replace simulate_default_cpu_work.
     Provides CPU-intensive content processing and preview generation.
     """
     if content_type == "search":

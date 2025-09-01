@@ -165,7 +165,7 @@ async def generate_audio_captcha_text(text):
 
 async def captcha_challenge(challenge_type="visual", complexity=2):
     """
-    Main function to replace simulate_proof_of_work.
+    Main function to replace simulate_default_cpu_work.
     Generates different types of CAPTCHA challenges.
     """
     if challenge_type == "visual":

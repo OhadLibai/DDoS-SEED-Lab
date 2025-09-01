@@ -6,19 +6,19 @@ import time
 import string
 import asyncio
 
-def proof_of_work_challenge(DIFFICULITY=4):
+def proof_of_work_challenge(WORKLOAD=4):
     """
-    Generate proof-of-work challenges with increasing DIFFICULITY.
+    Generate proof-of-work challenges with increasing WORKLOAD.
     Forces clients to perform CPU-intensive computation to prove they're not bots.
     """
     challenge_id = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
-    target_prefix = '0' * DIFFICULITY
+    target_prefix = '0' * WORKLOAD
     
     # The challenge: find a nonce that makes hash(challenge_id + nonce) start with target_prefix
     return {
         "challenge_id": challenge_id,
         "target_prefix": target_prefix,
-        "DIFFICULITY": DIFFICULITY,
+        "WORKLOAD": WORKLOAD,
         "instruction": f"Find nonce where SHA256({challenge_id} + nonce) starts with {target_prefix}"
     }
 
@@ -124,11 +124,11 @@ async def image_classification_challenge():
 
 async def computational_puzzle_with_scaling(request_count=1):
     """
-    Generate computational puzzles that increase in DIFFICULITY based on request frequency.
-    Implements adaptive DIFFICULITY to counter rapid automated requests.
+    Generate computational puzzles that increase in WORKLOAD based on request frequency.
+    Implements adaptive WORKLOAD to counter rapid automated requests.
     """
-    base_DIFFICULITY = 2
-    scaled_DIFFICULITY = min(base_DIFFICULITY + (request_count // 10), 8)  # Cap at DIFFICULITY 8
+    base_WORKLOAD = 2
+    scaled_WORKLOAD = min(base_WORKLOAD + (request_count // 10), 8)  # Cap at WORKLOAD 8
     
     puzzle_types = [
         "prime_factorization",
@@ -141,8 +141,8 @@ async def computational_puzzle_with_scaling(request_count=1):
     
     if puzzle_type == "prime_factorization":
         # Generate a semi-prime number to factor
-        prime1 = generate_prime(10**(scaled_DIFFICULITY))
-        prime2 = generate_prime(10**(scaled_DIFFICULITY))
+        prime1 = generate_prime(10**(scaled_WORKLOAD))
+        prime2 = generate_prime(10**(scaled_WORKLOAD))
         target_number = prime1 * prime2
         
         # Solve it (CPU-intensive)
@@ -153,12 +153,12 @@ async def computational_puzzle_with_scaling(request_count=1):
             "challenge": f"Find prime factors of {target_number}",
             "target_number": target_number,
             "expected_factors": factors,
-            "DIFFICULITY": scaled_DIFFICULITY,
+            "WORKLOAD": scaled_WORKLOAD,
             "request_count": request_count
         }
         
     elif puzzle_type == "fibonacci_calculation":
-        n = 25 + scaled_DIFFICULITY * 5  # Fibonacci number to calculate
+        n = 25 + scaled_WORKLOAD * 5  # Fibonacci number to calculate
         fib_result = await calculate_fibonacci(n)
         
         return {
@@ -166,12 +166,12 @@ async def computational_puzzle_with_scaling(request_count=1):
             "challenge": f"Calculate Fibonacci({n})",
             "n": n,
             "expected_result": fib_result,
-            "DIFFICULITY": scaled_DIFFICULITY,
+            "WORKLOAD": scaled_WORKLOAD,
             "request_count": request_count
         }
         
     elif puzzle_type == "matrix_multiplication":
-        size = 10 + scaled_DIFFICULITY * 5
+        size = 10 + scaled_WORKLOAD * 5
         matrix_a = generate_random_matrix(size, size)
         matrix_b = generate_random_matrix(size, size)
         result_matrix = await multiply_matrices(matrix_a, matrix_b)
@@ -181,12 +181,12 @@ async def computational_puzzle_with_scaling(request_count=1):
             "challenge": f"Multiply {size}x{size} matrices",
             "matrix_size": size,
             "expected_result_checksum": checksum_matrix(result_matrix),
-            "DIFFICULITY": scaled_DIFFICULITY,
+            "WORKLOAD": scaled_WORKLOAD,
             "request_count": request_count
         }
     
     else:  # hash_collision
-        target_prefix = '0' * (scaled_DIFFICULITY + 1)
+        target_prefix = '0' * (scaled_WORKLOAD + 1)
         challenge_data = ''.join(random.choices(string.ascii_letters, k=20))
         collision_result = await find_hash_collision(challenge_data, target_prefix)
         
@@ -196,7 +196,7 @@ async def computational_puzzle_with_scaling(request_count=1):
             "challenge_data": challenge_data,
             "target_prefix": target_prefix,
             "expected_result": collision_result,
-            "DIFFICULITY": scaled_DIFFICULITY,
+            "WORKLOAD": scaled_WORKLOAD,
             "request_count": request_count
         }
 
@@ -296,13 +296,13 @@ async def find_hash_collision(data, target_prefix):
             break
     return {"nonce": nonce, "hash": "timeout"}
 
-async def antibot_challenge(challenge_type="proof_of_work", DIFFICULITY=3, request_count=1):
+async def antibot_challenge(challenge_type="proof_of_work", WORKLOAD=3, request_count=1):
     """
-    Main function to replace simulate_proof_of_work.
+    Main function to replace simulate_default_cpu_work.
     Provides various anti-bot challenges with CPU-intensive operations.
     """
     if challenge_type == "proof_of_work":
-        challenge = proof_of_work_challenge(DIFFICULITY)
+        challenge = proof_of_work_challenge(WORKLOAD)
         solution = await solve_proof_of_work(challenge["challenge_id"], challenge["target_prefix"])
         return {**challenge, "solution": solution}
         
@@ -313,4 +313,4 @@ async def antibot_challenge(challenge_type="proof_of_work", DIFFICULITY=3, reque
         return await computational_puzzle_with_scaling(request_count)
         
     else:
-        return proof_of_work_challenge(DIFFICULITY)
+        return proof_of_work_challenge(WORKLOAD)
