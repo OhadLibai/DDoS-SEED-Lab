@@ -63,110 +63,26 @@ Focus: HTTP/1.1 legacy protocol vulnerabilities in HTTP/2 environments
 - Cloud Slowloris: Steganographic headers with intelligent adaptation
 - Key Learning: Backward compatibility attack vectors, protocol fallback exploitation
 
-Quick Start
-
-Prerequisites
-- Docker and Docker Compose installed
-- Google Cloud Platform account (free tier, no billing required)
-- gcloud CLI installed for cloud deployments
-- 4GB+ RAM recommended for local testing
-
-Choose Your Lab Path
-
-Option 1: Start with HTTP/2 Application Floods
-cd http2-app-flood
-./deploy-server.sh --local part-A
-./deploy-attack.sh --local part-A
-
-Option 2: Explore Flow Control Attacks
-cd flow-control
-./deploy-server.sh local zero-window
-./deploy-attack.sh zero-window local --connections 512
-
-Option 3: Study Legacy Protocol Vulnerabilities
-cd bonus-slowloris
-./deploy-server.sh latest local
-./deploy-attack.sh advanced local --logs
-
 Real Internet Testing (GCP Free Tier)
-
 Each lab supports cloud deployment for realistic internet-scale testing:
 
-# One-time GCP setup (run from any lab directory)
-./setup-gcp-infrastructure.sh YOUR_PROJECT_ID
+Monitoring and Analysis:
+	- Response Time Testing
+	- Bandwidth Consumption
+	- Request Rate
+	- Error Rates
+	- CPU and Memory Usage
+	- Thread Pool Depletion
+	- Latency Spikes
+	- Stream Status
+	- TCP Connection Health
+	- Average Connection Duration
 
-# Deploy server to cloud
-./deploy-server.sh --gcp <lab-specific-options>
-
-# Attack cloud server from local machine
-./deploy-attack.sh --gcp <lab-specific-options>
-
-Common Deployment Patterns
-
-Server Deployment
-# Local development
-./deploy-server.sh --local <options>
-
-# Cloud production testing  
-./deploy-server.sh --gcp <options>
-
-# Stop servers
-./deploy-server.sh --stop
-
-# Destroy cloud infrastructure
-./deploy-server.sh --destruct-vm
-
-Attack Deployment
-# Local attacks (to local servers)
-./deploy-attack.sh --local <attack-type> <options>
-
-# Cloud attacks (from local to cloud servers)
-./deploy-attack.sh --gcp <attack-type> <options>
-
-# Stop all attacks
-./deploy-attack.sh --stop
-
-Monitoring and Analysis
-
-Essential Monitoring Commands
-
-Response Time Testing:
-# Local server
-watch -n 1 'curl -w "Response: %{time_total}s\n" -o /dev/null -s http://localhost:8080'
-
-# Cloud server  
-curl -w "Response: %{time_total}s\n" -o /dev/null -s http://EXTERNAL_IP:8080
-
-Resource Usage:
-# Local containers
-docker stats --no-stream
-
-# Cloud resources
-gcloud compute ssh <instance-name> --command="docker stats --no-stream"
-
-Connection Analysis:
-# Active connections
-ss -tan | grep :8080 | wc -l
-
-# Container-level connections
-docker exec <container> sh -c "awk 'NR>1 && \$4==\"01\" {count++} END {print count+0}' /proc/net/tcp"
 
 Cleanup and Cost Management
+Complete Lab Cleanup on Cloud Included
 
-Complete Lab Cleanup
-# Stop all local resources
-docker stop $(docker ps -q)
-docker system prune -f
-
-# Destroy all GCP resources
-./deploy-server.sh --gcp --destruct-vm  # Run from any lab directory
-
-Cost Management
-- GCP VMs auto-shutdown after 2 hours to prevent unexpected charges
-- Use --destruct-vm flag to completely remove cloud infrastructure
-- Monitor GCP billing dashboard for usage
-
-Lab Directory Structure
+Lab Directory Structure:
 
 DDoS-SEED-Lab/
 ├── README.md                    # This overview document
@@ -186,10 +102,3 @@ DDoS-SEED-Lab/
     ├── attacks/               # Slowloris variants
     ├── deploy-server.sh
     └── deploy-attack.sh
-
-Further Reading
-
-- RFC 7540: HTTP/2 Specification (https://tools.ietf.org/html/rfc7540)
-- HTTP/2 Flow Control Mechanisms (https://tools.ietf.org/html/rfc7540#section-6.9)
-- Apache HTTP/2 Module Documentation (https://httpd.apache.org/docs/2.4/mod/mod_http2.html)
-- GCP Free Tier Documentation (https://cloud.google.com/free/docs/gcp-free-tier)
