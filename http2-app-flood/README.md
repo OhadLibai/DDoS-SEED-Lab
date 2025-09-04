@@ -53,7 +53,7 @@ The HTTP/2 Flood Attack Lab is a comprehensive educational laboratory exercise d
 ### Step 1: Local Testing
 ```bash
 # Clone repository
-git clone <repository-url>
+git clone https://github.com/OhadLibai/DDoS-SEED-Lab.git
 git checkout http2
 cd DDoS-SEED-Lab/http2-app-flood
 
