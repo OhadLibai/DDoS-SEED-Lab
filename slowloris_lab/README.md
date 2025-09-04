@@ -106,7 +106,7 @@ cd DDoS-SEED-lab/slowloris_lab
 
 # Deploy chosen part
 cd part_A  # or part_B
-docker-compose up -d
+docker-compose up -p slowloris-lab-<part> -d
 ```
 
 ## Lab Components
