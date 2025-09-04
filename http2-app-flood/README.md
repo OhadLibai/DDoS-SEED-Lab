@@ -95,6 +95,8 @@ cd DDoS-SEED-Lab/http2-app-flood
 ```
 
 #### Deploy and Test
+ssh to VM created
+clone the repo to the VM
 ```bash
 # Deploy server on GCP
 ./deploy-server.sh --gcp part-A
