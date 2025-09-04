@@ -1,5 +1,5 @@
 # docker-compose for slowloris part A
-name: slowloris-lab-A
+name: slowloris-lab-a
 services:
   victim:
     image: httpd:2.2  # Old Apache server
