@@ -342,19 +342,19 @@ elif [ "$TARGET" = "--gcp" ]; then
     print_info "Uploading server files to VM..."
     gcloud compute scp $TAR_FILE $VM_NAME:"$HOME"/http2-flood-server-update.tar.gz --zone=$ZONE
 
-    # Helper function to run docker-compose with compatibility
-    dc() {
-    if command -v docker-compose >/dev/null 2>&1; then
-        docker-compose "$@"
-    else
-        docker compose "$@"
-    fi
-    }
 
     # Deploy server on VM
     print_info "Deploying victim server on VM..."
     DEPLOY_SCRIPT="
         set -e
+        # Helper function to run docker-compose with compatibility
+        dc() {
+        if command -v docker-compose >/dev/null 2>&1; then
+            docker-compose "$@"
+        else
+            docker compose "$@"
+        fi
+        }
         cd \$HOME
 
         # Kill existing victim servers (ensures clean state)
