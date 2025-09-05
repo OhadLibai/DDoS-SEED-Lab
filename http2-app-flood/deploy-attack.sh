@@ -313,7 +313,7 @@ elif [ "$TARGET" = "--gcp" ]; then
 
     # Launch attack
     print_info "Building and starting attack container..."
-    if dc -f up -d --build; then
+    if dc up -d --build; then
         print_success "GCP attack launched successfully!"
         echo ""
         print_success "Attacking GCP server at: $TARGET_URL"
