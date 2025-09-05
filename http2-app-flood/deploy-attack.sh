@@ -58,6 +58,15 @@ usage() {
     exit 1
 }
 
+dc() {
+    if command -v docker-compose >/dev/null 2>&1; then
+        sudo docker-compose "\$@"
+    else
+        sudo docker compose "\$@"
+    fi
+    }
+
+
 # HTTP/2 server health check function
 check_http2_server() {
     local target_url=$1
@@ -140,7 +149,7 @@ if [ "$TARGET" = "--local" ]; then
     if [ "$COMMAND" = "--stop" ]; then
         print_info "Stopping local attacks..."
         cd attacks
-        docker-compose down 2>/dev/null || true
+        dc -f down 2>/dev/null || true
         cd ..
         print_success "Local attacks stopped successfully!"
         exit 0
@@ -179,11 +188,11 @@ if [ "$TARGET" = "--local" ]; then
     
     # Stop any existing attacks
     cd attacks
-    docker-compose down 2>/dev/null || true
-    
+    dc -f down 2>/dev/null || true
+
     # Launch attack
     print_info "Building and starting attack container..."
-    if docker-compose up -d --build; then
+    if dc -f up -d --build; then
         print_success "Local attack launched successfully!"
         echo
         echo "=================================================="
@@ -214,7 +223,7 @@ elif [ "$TARGET" = "--gcp" ]; then
     if [ "$COMMAND" = "--stop" ]; then
         print_info "Stopping GCP attacks..."
         cd attacks
-        docker-compose down 2>/dev/null || true
+        dc -f down 2>/dev/null || true
         cd ..
         print_success "GCP attacks stopped successfully!"
         exit 0
@@ -294,11 +303,11 @@ elif [ "$TARGET" = "--gcp" ]; then
     
     # Stop any existing attacks
     cd attacks
-    docker-compose down 2>/dev/null || true
-    
+    dc -f down 2>/dev/null || true
+
     # Launch attack
     print_info "Building and starting attack container..."
-    if docker-compose up -d --build; then
+    if dc -f up -d --build; then
         print_success "GCP attack launched successfully!"
         echo ""
         print_success "Attacking GCP server at: $TARGET_URL"
