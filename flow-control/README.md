@@ -79,6 +79,8 @@ This lab explores HTTP/2 flow control vulnerabilities through three distinct att
 ```
 
 **Example Complete Workflow:**
+Set the project to gcloud.
+
 ```bash
 # Deploy zero-window server locally
 ./deploy-server.sh local zero-window
