@@ -59,12 +59,18 @@ usage() {
 }
 
 dc() {
-    if command -v docker-compose >/dev/null 2>&1; then
-        sudo docker-compose "\$@"
-    else
-        sudo docker compose "\$@"
-    fi
-    }
+  # Prefer Compose v2
+  if docker compose version >/dev/null 2>&1; then
+    sudo docker compose "$@"
+  # Fallback to legacy v1 if present
+  elif command -v docker-compose >/dev/null 2>&1; then
+    sudo docker-compose "$@"
+  else
+    echo "ERROR: Neither 'docker compose' nor 'docker-compose' found." >&2
+    exit 1
+  fi
+}
+
 
 
 # HTTP/2 server health check function
