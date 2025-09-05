@@ -364,7 +364,7 @@ elif [ "$TARGET" = "--gcp" ]; then
         
         # Extract new server files
         tar -xzf http2-flood-server-update.tar.gz
-        cd http2-flood-lab
+        cd "$part"
         
         # Set environment variables
         export SCENARIO='$SCENARIO'
