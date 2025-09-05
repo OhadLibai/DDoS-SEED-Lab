@@ -340,7 +340,7 @@ elif [ "$TARGET" = "--gcp" ]; then
     
     # Upload server files to VM
     print_info "Uploading server files to VM..."
-    gcloud compute scp $TAR_FILE $VM_NAME:"$HOME"http2-flood-server-update.tar.gz --zone=$ZONE
+    gcloud compute scp $TAR_FILE $VM_NAME:"$HOME"/http2-flood-server-update.tar.gz --zone=$ZONE
     
     # Deploy server on VM
     print_info "Deploying victim server on VM..."
