@@ -129,6 +129,8 @@ cd DDoS-SEED-Lab/flow-control
 # Deploy Apache server to GCP
 ./deploy-server.sh gcp zero-window
 
+# You will revieve the IP of the server to attack along with a command to run
+
 # Attack from local machine over internet
 ./deploy-attack.sh zero-window 35.123.45.67 --connections 512
 
