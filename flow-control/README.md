@@ -85,7 +85,9 @@ Set the project to gcloud.
 ```bash
 #SSH to the created VM and clone the repo.
 
-#Set the project with gcloud config set project YOUR_PROJECT_ID
+#Set the project with gcloud auth login
+
+#gcloud config set project YOUR_PROJECT_ID
 
 
 # Deploy zero-window server locally
