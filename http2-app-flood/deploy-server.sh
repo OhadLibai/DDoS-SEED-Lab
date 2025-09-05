@@ -388,7 +388,7 @@ elif [ "$TARGET" = "--gcp" ]; then
         echo 'Victim server deployment completed!'
         echo 'Checking container status...'
         sleep 5
-        sudo docker-compose ps
+        sudo docker compose ps
     "
     
     # Execute deployment on VM
