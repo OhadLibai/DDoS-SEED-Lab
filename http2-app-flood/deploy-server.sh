@@ -254,7 +254,7 @@ elif [ "$TARGET" = "--gcp" ]; then
         
         print_info "Stopping GCP victim servers..."
         gcloud compute ssh $VM_NAME --zone=$ZONE --command="
-            cd ~/http2-flood-lab 2>/dev/null || { echo 'No servers deployed'; exit 0; }
+            cd "$HOME"http2-flood-lab 2>/dev/null || { echo 'No servers deployed'; exit 0; }
             for part in part-A part-B; do
                 if [ -d \$part ]; then
                     echo \"Stopping \$part victim server...\"
@@ -340,14 +340,14 @@ elif [ "$TARGET" = "--gcp" ]; then
     
     # Upload server files to VM
     print_info "Uploading server files to VM..."
-    gcloud compute scp $TAR_FILE $VM_NAME:~/http2-flood-server-update.tar.gz --zone=$ZONE
+    gcloud compute scp $TAR_FILE $VM_NAME:"$HOME"http2-flood-server-update.tar.gz --zone=$ZONE
     
     # Deploy server on VM
     print_info "Deploying victim server on VM..."
     DEPLOY_SCRIPT="
         set -e
-        cd ~/
-        
+        cd \$HOME
+
         # Kill existing victim servers (ensures clean state)
         if [ -d http2-flood-lab ]; then
             cd http2-flood-lab
@@ -355,11 +355,11 @@ elif [ "$TARGET" = "--gcp" ]; then
                 if [ -d \$part ]; then
                     echo \"Stopping \$part victim server...\"
                     cd \$part
-                    docker-compose -f docker-compose.server.yml down --remove-orphans || true
+                    docker compose -f docker-compose.server.yml down --remove-orphans || true
                     cd ..
                 fi
             done
-            cd ~/
+            cd \$HOME
         fi
         
         # Extract new server files
