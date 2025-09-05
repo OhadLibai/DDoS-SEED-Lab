@@ -87,6 +87,7 @@ cd DDoS-SEED-Lab/http2-app-flood
 
 #### Setup GCP Infrastructure (One-Time)
 ```bash
+cd DDoS-SEED-Lab/http2-app-flood
 # Run complete GCP setup (replaces manual VM creation)
 ./gcp-setup-infrastructure.sh YOUR_PROJECT_ID
 
