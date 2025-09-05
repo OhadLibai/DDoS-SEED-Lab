@@ -340,7 +340,7 @@ EOF
         --metadata-from-file startup-script=/tmp/http2-lab-startup.sh \
         --maintenance-policy=MIGRATE \
         --provisioning-model=STANDARD \
-        --image-family=ubuntu-2004-lts \
+        --image-family=ubuntu-2204-lts \
         --image-project=ubuntu-os-cloud \
         --boot-disk-size=20GB \
         --boot-disk-type=pd-standard \

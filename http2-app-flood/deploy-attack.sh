@@ -59,17 +59,22 @@ usage() {
 }
 
 dc() {
-  # Prefer Compose v2
-  if docker compose version >/dev/null 2>&1; then
+  # Prefer Compose v2 (probe with sudo first, then without)
+  if sudo -n docker compose version >/dev/null 2>&1; then
     sudo docker compose "$@"
-  # Fallback to legacy v1 if present
-  elif command -v docker-compose >/dev/null 2>&1; then
+  elif docker compose version >/dev/null 2>&1; then
+    docker compose "$@"
+  # Fallback to legacy v1 (probe with sudo, then without)
+  elif sudo -n docker-compose version >/dev/null 2>&1; then
     sudo docker-compose "$@"
+  elif command -v docker-compose >/dev/null 2>&1; then
+    docker-compose "$@"
   else
-    echo "ERROR: Neither 'docker compose' nor 'docker-compose' found." >&2
+    echo "ERROR: Docker Compose not installed (neither 'docker compose' nor 'docker-compose')." >&2
     exit 1
   fi
 }
+
 
 
 
@@ -155,7 +160,7 @@ if [ "$TARGET" = "--local" ]; then
     if [ "$COMMAND" = "--stop" ]; then
         print_info "Stopping local attacks..."
         cd attacks
-        dc -f down 2>/dev/null || true
+        dc down 2>/dev/null || true
         cd ..
         print_success "Local attacks stopped successfully!"
         exit 0
@@ -194,11 +199,11 @@ if [ "$TARGET" = "--local" ]; then
     
     # Stop any existing attacks
     cd attacks
-    dc -f down 2>/dev/null || true
+    dc down 2>/dev/null || true
 
     # Launch attack
     print_info "Building and starting attack container..."
-    if dc -f up -d --build; then
+    if dc up -d --build; then
         print_success "Local attack launched successfully!"
         echo
         echo "=================================================="
@@ -229,7 +234,7 @@ elif [ "$TARGET" = "--gcp" ]; then
     if [ "$COMMAND" = "--stop" ]; then
         print_info "Stopping GCP attacks..."
         cd attacks
-        dc -f down 2>/dev/null || true
+        dc down 2>/dev/null || true
         cd ..
         print_success "GCP attacks stopped successfully!"
         exit 0
@@ -309,7 +314,7 @@ elif [ "$TARGET" = "--gcp" ]; then
     
     # Stop any existing attacks
     cd attacks
-    dc -f down 2>/dev/null || true
+    dc down 2>/dev/null || true
 
     # Launch attack
     print_info "Building and starting attack container..."
