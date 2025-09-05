@@ -381,6 +381,7 @@ elif [ "$TARGET" = "--gcp" ]; then
         
         # Deploy the victim server
         cd $COMMAND
+        echo "Building and starting victim server..."
         dc -f docker-compose.server.yml down --remove-orphans
         dc -f docker-compose.server.yml up -d --build
         
