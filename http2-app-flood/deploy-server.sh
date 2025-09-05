@@ -346,7 +346,7 @@ elif [ "$TARGET" = "--gcp" ]; then
     print_info "Deploying victim server on VM..."
     DEPLOY_SCRIPT="
         set -e
-        cd ~/
+        cd /
         
         # Kill existing victim servers (ensures clean state)
         if [ -d http2-flood-lab ]; then
