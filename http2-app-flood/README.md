@@ -102,6 +102,8 @@ clone the repo to the VM
 # Deploy server on GCP
 ./deploy-server.sh --gcp part-A
 
+Open docker WSL integration if needed
+
 # Attack GCP server from local machine (real internet!)
 ./deploy-attack.sh --gcp part-A
 ```
