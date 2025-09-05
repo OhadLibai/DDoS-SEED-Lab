@@ -65,8 +65,6 @@ This lab explores HTTP/2 flow control vulnerabilities through three distinct att
 **Deploy and attack servers locally:**
 
 ```bash
-#SSH to the created VM and clone the repo.
-
 
 # Deploy Apache server
 ./deploy-server.sh local zero-window
@@ -85,6 +83,7 @@ This lab explores HTTP/2 flow control vulnerabilities through three distinct att
 Set the project to gcloud.
 
 ```bash
+#SSH to the created VM and clone the repo.
 # Deploy zero-window server locally
 ./deploy-server.sh local zero-window
 
