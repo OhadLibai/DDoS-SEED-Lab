@@ -106,7 +106,7 @@ done
 set -- "${POSITIONAL_ARGS[@]}"
 
 # Check arguments
-if [ $# -lt 1 ]; then
+if [ $# -lt 2 ]; then
     usage
 fi
 
