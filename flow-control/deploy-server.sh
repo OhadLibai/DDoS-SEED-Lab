@@ -155,7 +155,7 @@ deploy_gcp_server() {
     echo ""
     
     # Check if infrastructure exists
-    if ! gcloud compute instances list --filter="name:$INFRASTRUCTURE_NAME" --format="value(name)" | grep -q "$INFRASTRUCTURE_NAME"; then
+    if ! gcloud compute instances list --filter="name=$INFRASTRUCTURE_NAME" --format="value(name)" | grep -q "$INFRASTRUCTURE_NAME"; then
         echo -e "${RED}❌ Infrastructure not found!${NC}"
         echo "First run: ./setup-gcp.sh"
         exit 1
