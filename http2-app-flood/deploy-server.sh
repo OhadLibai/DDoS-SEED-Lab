@@ -349,12 +349,13 @@ elif [ "$TARGET" = "--gcp" ]; then
         set -e
         # Helper function to run docker-compose with compatibility
         dc() {
-        if command -v docker-compose >/dev/null 2>&1; then
-            docker-compose "$@"
-        else
-            docker compose "$@"
-        fi
+            if command -v docker-compose >/dev/null 2>&1; then
+                docker-compose "\$@"
+            else
+                docker compose "\$@"
+            fi
         }
+
         cd \$HOME
 
         # Kill existing victim servers (ensures clean state)
@@ -381,7 +382,6 @@ elif [ "$TARGET" = "--gcp" ]; then
         
         # Deploy the victim server
         cd $COMMAND
-        echo "Building and starting victim server..."
         dc -f docker-compose.server.yml down --remove-orphans
         dc -f docker-compose.server.yml up -d --build
         
