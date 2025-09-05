@@ -350,9 +350,9 @@ elif [ "$TARGET" = "--gcp" ]; then
         # Helper function to run docker-compose with compatibility
         dc() {
             if command -v docker-compose >/dev/null 2>&1; then
-                docker-compose "\$@"
+                sudo docker-compose "\$@"
             else
-                docker compose "\$@"
+                sudo docker compose "\$@"
             fi
         }
 
@@ -388,7 +388,7 @@ elif [ "$TARGET" = "--gcp" ]; then
         echo 'Victim server deployment completed!'
         echo 'Checking container status...'
         sleep 5
-        docker-compose ps
+        sudo docker-compose ps
     "
     
     # Execute deployment on VM
