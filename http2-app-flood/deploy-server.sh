@@ -415,6 +415,7 @@ elif [ "$TARGET" = "--gcp" ]; then
             echo "  ./deploy-server.sh --gcp --stop --vm  # Stop servers + shutdown VM"
             echo ""
             print_info "To attack this server:"
+            echo $COMMAND
             echo "  ./deploy-attack.sh --gcp $COMMAND     # From local to GCP server"
             echo "  ./deploy-attack.sh --local $COMMAND   # If running locally"
         else
