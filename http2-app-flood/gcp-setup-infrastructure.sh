@@ -190,7 +190,7 @@ print_info "Creating VM instance..."
 gcloud compute instances create $VM_NAME \
     --zone=$ZONE \
     --machine-type=$MACHINE_TYPE \
-    --image-family=ubuntu-2004-lts \
+    --image-family=ubuntu-2404-lts \
     --image-project=ubuntu-os-cloud \
     --boot-disk-size=10GB \
     --boot-disk-type=pd-standard \
