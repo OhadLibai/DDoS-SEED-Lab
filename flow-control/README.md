@@ -137,6 +137,8 @@ cd DDoS-SEED-Lab/flow-control
 # Monitor attack progress
 ./deploy-attack.sh zero-window 35.123.45.67 --logs
 
+# NOTE: if h2 causes import issues use sudo apt install python3-h2
+
 # Stop attack
 ./deploy-attack.sh zero-window 35.123.45.67 --stop
 ```
