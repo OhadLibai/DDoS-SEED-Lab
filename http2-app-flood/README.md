@@ -106,6 +106,8 @@ Open docker WSL integration if needed
 
 # Attack GCP server from local machine (real internet!)
 ./deploy-attack.sh --gcp part-A
+
+(TIP - if docker daeamon creates issues, try sudo dockerd & and export DOCKER_HOST=unix:///var/run/docker.sock)
 ```
 
 ## 📚 Deployment Reference
