@@ -122,7 +122,7 @@ Set the project to gcloud.
 gcloud config set project YOUR_PROJECT_ID
 
 # Clone lab (if needed)
-git clone https://github.com/your-repo/DDoS-SEED-Lab.git
+git clone https://github.com/OhadLibai/DDoS-SEED-Lab.git
 cd DDoS-SEED-Lab/flow-control
 
 # Create GCP infrastructure (one-time setup)
