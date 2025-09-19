@@ -1,7 +1,5 @@
 # HTTP/2 DDoS Attack Lab
 
-**Copyright © 2024 | SEED Labs**
-
 ## Overview
 
 This lab explores Distributed Denial of Service (DDoS) attacks targeting HTTP/2 protocol vulnerabilities. Students will gain hands-on experience with modern web protocol exploitation techniques through controlled environments, understanding both HTTP/2 application flood attacks and flow control mechanism exploitation.
