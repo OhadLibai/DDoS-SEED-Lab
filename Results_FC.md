@@ -1,29 +1,51 @@
-# Flow Control — Test Report
----
-
-## Table of contents
-1. [Overview](#overview)  
-2. [Commands (runbook)](#commands-runbook)  
-3. [Captured Results (provided)](#captured-results-provided)  
-4. [Zero-window attack — snapshot results](#zero-window-attack---snapshot-results)  
-5. [Slow incremental attack — snapshot results](#slow-incremental-attack---snapshot-results)  
-6. [Observations & quick analysis](#observations--quick-analysis)  
-7. [Recommended next steps / data collection playbook](#recommended-next-steps--data-collection-playbook)  
-8. [Scripts / one-liners to capture more data](#scripts--one-liners-to-capture-more-data)  
-9. [Appendix — placeholders for extra pasted outputs](#appendix--placeholders-for-extra-pasted-outputs)
+# Flow Control Attack Results
 
 ---
 
-## Overview
+## Host: 34.31.183.135
 
-This single-file report organizes the flow-control checks and attack snapshots you ran against the Apache/HTTP2 test hosts. It includes the commands you used, the outputs you already provided, quick analysis, and recommended next steps for deeper troubleshooting (socket-level captures, time-series net I/O, and Apache worker checks).
+### Zero Window Attack
+| Metric | Result |
+|--------|--------|
+| Curl single request | **0.2099 s** |
+| Connection state | `2 tcp` |
+| Docker Net I/O | `http2-apache-zero-window   2.04MB / 1.22MB` |
+
+### Slow Incremental Attack  
+| Metric | Result |
+|--------|--------|
+| Curl single request | **0.209578 s** |
+| Connection state | `2` |
+| Docker Net I/O | `http2-apache-slow-incremental   1.11MB / 629kB` |
+
+### Adaptive Slow Attack
+| Metric | Result |
+|--------|--------|
+| Curl single request | Same as slow incremental |
+| Connection state | Same as slow incremental |
+| Docker Net I/O | Same as slow incremental |
 
 ---
 
-## Commands (runbook)
-
-Use these to reproduce checks and collect more data during/after an attack.
-
-### Quick response check
+## Attack Commands Used
 ```bash
+# Flow control measurement
 curl -w "Response: %{time_total}s\n" -s -o /dev/null http://34.31.183.135/
+
+# Connection state breakdown
+ss -tuln | grep ':80' | awk '{print $1}' | sort | uniq -c
+
+# Monitor network I/O (bytes per second)
+docker stats --no-stream --format "table {{.Name}}\t{{.NetIO}}"
+
+# Zero window attack
+./deploy-attack.sh zero-window 34.31.183.135 --connections 512
+```
+
+---
+
+## Observations
+- **Response times**: All attacks show similar response times (~0.21s), indicating minimal impact on server performance
+- **Network I/O**: Zero window attack generates higher traffic (2.04MB/1.22MB) compared to slow incremental (1.11MB/629kB)
+- **Connection count**: Consistently low (2 connections), suggesting effective connection limiting or attack mitigation
+- **Attack effectiveness**: Limited success - server maintains normal response times and low connection counts across all flow control attack variants
