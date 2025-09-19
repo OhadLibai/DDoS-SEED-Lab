@@ -39,11 +39,7 @@ After completing this lab, students should be able to:
 
 ### Environment Preparation
 
-1. Download the lab files and extract them
-2. Navigate to the lab directory
-3. Build the Docker containers:
-   ```bash
-   docker-compose build
+Described in each attack seperatly.
    ```
 
 ## Lab Tasks
@@ -59,18 +55,6 @@ HTTP/2 introduces stream multiplexing, allowing multiple requests over a single 
 ### Objective
 
 Implement an HTTP/2 application flood attack that exploits stream multiplexing to overwhelm a server with computationally expensive requests.
-
-### Setup
-
-1. Start the HTTP/2 server:
-   ```bash
-   docker-compose up http2-server
-   ```
-
-2. Verify the server is running:
-   ```bash
-   curl -v http://localhost:8080/health
-   ```
 
 ### Task 1.1: Basic Application Flood
 
@@ -320,7 +304,7 @@ Research and discuss potential mitigations:
 
 ### Lab Report
 
-Write a comprehensive report (8-10 pages) addressing:
+Write a comprehensive report addressing:
 
 1. **Attack Implementation**: Describe your implementation approach for each attack
 2. **Effectiveness Analysis**: Compare attack effectiveness using metrics and graphs
@@ -408,8 +392,8 @@ Prepare a 15-minute demonstration showing:
 
 ---
 
-**Lab Author**: SEED Labs Team  
+**Lab Authors**: Ohad Libai and Roei Ben Zion
 **Version**: 1.0  
-**Last Updated**: 2024
+**Last Updated**: 2025
 
 *This lab is designed for educational purposes only. All attacks should be performed only in controlled, authorized environments.*
