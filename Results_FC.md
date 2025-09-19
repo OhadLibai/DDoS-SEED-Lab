@@ -1,16 +1,29 @@
-| Metric / Command | Zero window (attack: `zero-window 34.31.183.135 --connections 512`) | Slow incremental (`http2-apache-slow-incremental`) | Notes |
-|---|---:|---:|---|
-| `curl -w "Response: %{time_total}s\n" -s -o /dev/null http://34.31.183.135/` | **0.2099 s** | **0.209578 s** | Single-run response time |
-| Connection state breakdown (`ss -tuln | grep ':80' | awk '{print $1}' | sort | uniq -c`) | **2 tcp** | **2** | Provided as `2 tcp` and `2` respectively |
-| Docker Net I/O (`docker stats --no-stream --format "table {{.Name}}\t{{.NetIO}}"`) |  
-`NAME                       NET I/O`  
-`http2-apache-zero-window   2.04MB / 1.22MB` |  
-`NAME                            NET I/O`  
-`http2-apache-slow-incremental   1.11MB / 629kB` | Net I/O snapshot for the container(s) during the test |
-| `watch -n 5 'docker stats ...'` (bandwidth over time) | N/A | N/A | No `watch` output pasted |
-| Apache worker threads (`ps aux | grep apache2 | wc -l`) | N/A | N/A | No output provided |
-| Apache status (`apache2ctl status`) | N/A | N/A | No output provided / Status module possibly unavailable |
-| Latency distribution (5 × `curl -w "%{time_total}s\n" -o /dev/null -s http://localhost/`) | N/A | N/A | No 5-run list provided |
-| Baseline vs current detection (script) | N/A | N/A | No baseline/current outputs provided |
-| Connection lifetime (`ss -o | grep :80 | head -5`) | N/A | N/A | No `ss -o` output provided |
-| Persistent connections (docker logs grep) | N/A | N/A | No log tail provided |
+# Flow Control — Test Report
+---
+
+## Table of contents
+1. [Overview](#overview)  
+2. [Commands (runbook)](#commands-runbook)  
+3. [Captured Results (provided)](#captured-results-provided)  
+4. [Zero-window attack — snapshot results](#zero-window-attack---snapshot-results)  
+5. [Slow incremental attack — snapshot results](#slow-incremental-attack---snapshot-results)  
+6. [Observations & quick analysis](#observations--quick-analysis)  
+7. [Recommended next steps / data collection playbook](#recommended-next-steps--data-collection-playbook)  
+8. [Scripts / one-liners to capture more data](#scripts--one-liners-to-capture-more-data)  
+9. [Appendix — placeholders for extra pasted outputs](#appendix--placeholders-for-extra-pasted-outputs)
+
+---
+
+## Overview
+
+This single-file report organizes the flow-control checks and attack snapshots you ran against the Apache/HTTP2 test hosts. It includes the commands you used, the outputs you already provided, quick analysis, and recommended next steps for deeper troubleshooting (socket-level captures, time-series net I/O, and Apache worker checks).
+
+---
+
+## Commands (runbook)
+
+Use these to reproduce checks and collect more data during/after an attack.
+
+### Quick response check
+```bash
+curl -w "Response: %{time_total}s\n" -s -o /dev/null http://34.31.183.135/
