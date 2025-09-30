@@ -33,7 +33,7 @@
 | Docker Net I/O | `prod-victim-server   6.01kB / 4.92kB` |s
 
 ### Advanced
-_Not available / not provided in the results._
+Similar (qualitative) results as basic attack. 
 
 ---
 
