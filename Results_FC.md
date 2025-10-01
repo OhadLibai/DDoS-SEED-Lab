@@ -3,22 +3,19 @@
 ### Zero Window
 | Metric | Result |
 |--------|--------|
-| Curl single request | **curl: (7) Failed to connect to 34.58.142.149 port 8080 after 103 ms: Couldn't connect to server Time: 0.103466s** |
-| Health check JSON | Not Reachable |
+| Curl single request | **Response: 0.103466s** |
 | Docker stats | `55b956792a6c   http2-apache-zero-window   0.17% CPU   108.9MiB / 554.9MiB  (19.62%)   1.2MB / 747kB I/O   19.1MB / 28.7kB Block I/O   PIDS:657` |
 
 ### Slow Incremental
 | Metric | Result |
 |--------|--------|
-| Curl single request | **10.6710 s** |
-| Health check JSON | Same as Basic |
-| Docker stats | `55b956792a6c   dev-victim-server   476.25% CPU   44.5MiB / 554.9MiB (8.02%)   13.1MB / 1.72MB Net I/O   34.9MB / 709kB Block I/O   PIDS:1` |
+| Curl single request | **Response: 0.103885s** |
+| Docker stats | cf8c7c0ff5d9 http2-apache-slow-incremental 0.01% CPU 10.77MiB / 554.9MiB (1.94%) 4.68kB / 3.64kB Net I/O 6.37MB / 28.7kB Block I/O PIDS:158 |
 
 ### Adaptive Slow
 | Metric | Result |
 |--------|--------|
-| Curl single request | **0.895640 s** |
-| Health check JSON | `{"WORKLOAD":5,"message":"Server is running","protocol":"HTTP/2","scenario":"default_scenario","status":"healthy"}` |
-| Docker stats | `483fa40bb883   prod-victim-server   0.00% CPU   32.33MiB / 554.9MiB (5.83%)   5.82kB / 4.66kB Net I/O   35.4MB / 299kB Block I/O   PIDS:1` |
+| Curl single request | **Response: 0.104652s** |
+| Docker stats | 5b32d1b44834 http2-apache-adaptive-slow 1.80% CPU 106.2MiB / 554.9MiB (19.15%) 912kB / 620kB Net I/O 10MB / 28.7kB Block I/O PIDS:657 |
 
 ---
