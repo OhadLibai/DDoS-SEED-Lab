@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-The HTTP/2 Flood Attack Lab is a comprehensive educational laboratory exercise designed to explore Distributed Denial of Service (DDoS) attacks that exploit HTTP/2 multiplexing capabilities. This lab implements **clean separation** between server deployment and attack deployment, enabling realistic testing scenarios including local-to-cloud attacks.
+A comprehensive educational laboratory exercise designed to explore Distributed Denial of Service (DDoS) attacks that exploit HTTP/2 multiplexing capabilities.
 
 **Focus**: Understanding HTTP/2 vulnerabilities through practical experimentation.
 
