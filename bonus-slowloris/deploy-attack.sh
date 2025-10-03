@@ -152,8 +152,8 @@ get_local_target_ip() {
     local forced_server_type="$1"
     
     # Get list of running server containers
-    local old_running=$(docker ps --format "{{.Names}}" | grep -c "^slowloris-old-server$" || echo "0")
-    local latest_running=$(docker ps --format "{{.Names}}" | grep -c "^slowloris-latest-server$" || echo "0")
+    local old_running=$(docker ps -q --filter "name=^slowloris-old-server$" | wc -l)
+    local latest_running=$(docker ps -q --filter "name=^slowloris-latest-server$" | wc -l)
     
     local server_type=""
     

@@ -196,7 +196,7 @@ deploy_local_server() {
     docker run -d \
         --name "$container_name" \
         --network bridge \
-        -p "$port:8080" \
+        -p "$port:80" \
         "slowloris-${server_type}-server"
     
     # Wait for server to start

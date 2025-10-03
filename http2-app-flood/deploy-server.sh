@@ -44,7 +44,7 @@ usage() {
     echo "  --stop              Stop containers + shutdown VM instance (VM still exists but powered off)"
     echo "  --destruct-vm    (GCP only) COMPLETELY REMOVE cloud infrastructure - requires re-running gcp-setup-infrastructure.sh"
     echo ""
-    echo "Environment Variables:"
+    echo "Environment Variables (options):"
     echo "  SCENARIO=<name>     CPU scenario: default_scenario, captcha, crypto, gaming, antibot, webservice, content"
     echo "  WORKLOAD=<1-5>      CPU workload intensity (default: 5)"
     echo ""

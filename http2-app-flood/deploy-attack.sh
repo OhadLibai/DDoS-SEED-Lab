@@ -61,6 +61,24 @@ usage() {
     exit 1
 }
 
+dc() {
+  # Prefer Compose v2 (probe with sudo first, then without)
+  if sudo -n docker compose version >/dev/null 2>&1; then
+    sudo docker compose "$@"
+  elif docker compose version >/dev/null 2>&1; then
+    docker compose "$@"
+  # Fallback to legacy v1 (probe with sudo, then without)
+  elif sudo -n docker-compose version >/dev/null 2>&1; then
+    sudo docker-compose "$@"
+  elif command -v docker-compose >/dev/null 2>&1; then
+    docker-compose "$@"
+  else
+    echo "ERROR: Docker Compose not installed (neither 'docker compose' nor 'docker-compose')." >&2
+    exit 1
+  fi
+}
+
+
 # HTTP/2 server health check function
 check_http2_server() {
     local target_url=$1
@@ -152,7 +170,7 @@ if [ "$TARGET" = "--local" ]; then
     if [ "$COMMAND" = "--stop" ]; then
         print_info "Stopping local attacks..."
         cd attacks
-        docker-compose down 2>/dev/null || true
+        dc stop 2>/dev/null || true
         cd ..
         print_success "Local attacks stopped successfully!"
         exit 0
@@ -191,11 +209,11 @@ if [ "$TARGET" = "--local" ]; then
     
     # Stop any existing attacks
     cd attacks
-    docker-compose down 2>/dev/null || true
+    dc down 2>/dev/null || true
     
     # Launch attack
     print_info "Building and starting attack container..."
-    if docker-compose up -d --build; then
+    if dc up -d --build; then
         print_success "Local attack launched successfully!"
         echo
         echo "=================================================="
@@ -226,7 +244,7 @@ elif [ "$TARGET" = "--gcp" ]; then
     if [ "$COMMAND" = "--stop" ]; then
         print_info "Stopping GCP attacks..."
         cd attacks
-        docker-compose down 2>/dev/null || true
+        dc stop 2>/dev/null || true
         cd ..
         print_success "GCP attacks stopped successfully!"
         exit 0
@@ -306,11 +324,11 @@ elif [ "$TARGET" = "--gcp" ]; then
     
     # Stop any existing attacks
     cd attacks
-    docker-compose down 2>/dev/null || true
+    dc down 2>/dev/null || true
     
     # Launch attack
     print_info "Building and starting attack container..."
-    if docker-compose up -d --build; then
+    if dc up -d --build; then
         print_success "GCP attack launched successfully!"
         echo ""
         print_success "Attacking GCP server at: $TARGET_URL"
@@ -337,7 +355,7 @@ elif [ "$TARGET" = "--target-ip" ]; then
     if [ "$COMMAND" = "--stop" ]; then
         print_info "Stopping custom target attacks..."
         cd attacks
-        docker-compose down 2>/dev/null || true
+        dc stop 2>/dev/null || true
         cd ..
         print_success "Custom target attacks stopped successfully!"
         exit 0
@@ -398,11 +416,11 @@ elif [ "$TARGET" = "--target-ip" ]; then
     
     # Stop any existing attacks
     cd attacks
-    docker-compose down 2>/dev/null || true
+    dc down 2>/dev/null || true
     
     # Launch attack
     print_info "Building and starting attack container..."
-    if docker-compose up -d --build; then
+    if dc up -d --build; then
         print_success "Custom target attack launched successfully!"
         echo ""
         print_success "Attacking server at: $TARGET_URL"

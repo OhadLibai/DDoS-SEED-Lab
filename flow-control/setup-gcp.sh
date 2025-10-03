@@ -185,7 +185,7 @@ create_infrastructure() {
     
     if ! gcloud compute firewall-rules describe http2-lab-allow-http &>/dev/null; then
         gcloud compute firewall-rules create http2-lab-allow-http \
-            --allow tcp:80,tcp:443 \
+            --allow tcp:80,tcp:443,tcp:8080 \
             --source-ranges 0.0.0.0/0 \
             --description "Allow HTTP/HTTPS for HTTP/2 lab" \
             --quiet
