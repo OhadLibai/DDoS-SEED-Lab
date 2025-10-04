@@ -15,7 +15,7 @@ DEFAULT_ZONE="us-central1-a"
 DEFAULT_MACHINE_TYPE="e2-micro"
 DEFAULT_VM_NAME="slowloris-victim"
 DEFAULT_DISK_SIZE="10GB"
-DEFAULT_IMAGE="ubuntu-2004-lts"
+DEFAULT_IMAGE="ubuntu-2204-lts"
 DEFAULT_FIREWALL_RULE="slowloris-http-rule"
 
 # Function to display usage
