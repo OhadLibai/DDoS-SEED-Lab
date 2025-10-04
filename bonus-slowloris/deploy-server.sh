@@ -17,7 +17,7 @@ if [ -f "gcp.env" ]; then
     ZONE="$GCP_ZONE"
     PROJECT="$GCP_PROJECT_ID"
 else
-    echo -e "${YELLOW}[WARNING]${NC} gcp.env not found, using hardcoded defaults"
+    echo -e "${BLUE}[INFO]${NC} gcp.env not found, using hardcoded defaults"
     echo -e "${BLUE}[INFO]${NC} Run './setup-gcp-infrastructure.sh' to create proper configuration"
     VM_NAME="slowloris-victim"
     ZONE="us-central1-a"
@@ -69,14 +69,17 @@ log_warning() {
 
 # Function to stop local server containers
 stop_local_servers() {
-    log "Stopping local server containers..."
+    log "Stopping local server containers..." >&2
+
+    # Use a more robust regex filter to find the server containers
+    containers=$(docker ps -q --filter "name=^slowloris-.*-server$" 2>/dev/null || true)
     
-    containers=$(docker ps -q --filter "name=slowloris-*-server" 2>/dev/null || true)
     if [ -n "$containers" ]; then
         docker stop $containers
-        log_success "Server containers stopped and preserved for inspection"
+        docker rm $containers # Also remove the containers after stopping
+        log_success "Server containers stopped and removed" >&2
     else
-        log_warning "No running server containers found"
+        log_warning "No running server containers found" >&2
     fi
 }
 
@@ -190,12 +193,20 @@ deploy_local_server() {
     local port="$2"
     local container_name="slowloris-${server_type}-server"
     
+    # --- ADD THIS BLOCK ---
+    local network_name="slowloris-net"
+    if ! docker network ls --format "{{.Name}}" | grep -q "^${network_name}$"; then
+        log "Creating docker network: $network_name"
+        docker network create "$network_name"
+    fi
+    # --- END OF BLOCK ---
+
     log "Deploying local $server_type server on port $port..."
     
     # Run server container
     docker run -d \
         --name "$container_name" \
-        --network bridge \
+        --network "slowloris-net" \
         -p "$port:80" \
         "slowloris-${server_type}-server"
     

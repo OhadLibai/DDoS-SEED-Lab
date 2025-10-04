@@ -19,7 +19,7 @@ if [ -f "gcp.env" ]; then
     ZONE="$GCP_ZONE"
     PROJECT="$GCP_PROJECT_ID"
 else
-    echo -e "${YELLOW}[WARNING]${NC} gcp.env not found, using hardcoded defaults"
+    echo -e "${BLUE}[INFO]${NC} gcp.env not found, using hardcoded defaults"
     echo -e "${BLUE}[INFO]${NC} Run './setup-gcp.sh' to create proper configuration"
     INFRASTRUCTURE_NAME="http2-lab-infrastructure"
     ZONE="us-central1-a"
