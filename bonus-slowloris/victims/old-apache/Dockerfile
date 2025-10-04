@@ -1,4 +1,4 @@
-FROM httpd:2.2.34
+FROM httpd:2.2.32
 
 # Create a simple index.html file in the default web root directory.
 # This ensures the server has a page to serve for the health check.

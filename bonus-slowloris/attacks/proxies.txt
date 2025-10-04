@@ -1,0 +1,25 @@
+# Example proxy list for cloud_advanced_slowloris.py
+# Format: protocol://host:port
+# Supported protocols: socks5, http
+# Lines starting with # are comments and will be ignored
+
+# Example SOCKS5 proxies (replace with real proxy addresses)
+# socks5://127.0.0.1:1080
+# socks5://proxy1.example.com:1080
+# socks5://proxy2.example.com:1080
+
+# Example HTTP proxies (replace with real proxy addresses)  
+# http://proxy1.example.com:8080
+# http://proxy2.example.com:3128
+# http://127.0.0.1:8080
+
+# NOTE: These are example entries only. 
+# Replace with actual working proxy servers for real testing.
+# Free proxy lists can be found online, but reliability varies.
+
+# Local test proxies (if you have them running locally)
+# socks5://127.0.0.1:1080
+# http://127.0.0.1:8080
+
+# Usage:
+# python cloud_advanced_slowloris.py target.com 100 --proxies proxies.txt

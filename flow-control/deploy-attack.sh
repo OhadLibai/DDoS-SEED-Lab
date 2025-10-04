@@ -20,7 +20,7 @@ if [ -f "gcp.env" ]; then
     ZONE="$GCP_ZONE"
     PROJECT="$GCP_PROJECT_ID"
 else
-    echo -e "${BLUE}[INFO]${NC} gcp.env not found, using hardcoded defaults"
+    echo -e "${YELLOW}[WARNING]${NC} gcp.env not found, using hardcoded defaults"
     echo -e "${BLUE}[INFO]${NC} Run './setup-gcp.sh' to create proper configuration"
     GCP_TARGET_IP=""
     INFRASTRUCTURE_NAME="http2-lab-infrastructure"
@@ -168,39 +168,50 @@ check_prerequisites() {
 deploy_local_attack() {
     local attack_type="$1"
     local connections="$2"
-
+    
     echo -e "${BLUE}🎯 Deploying Local Attack: $attack_type${NC}"
     echo -e "${BLUE}Target: localhost with $connections connections${NC}"
     echo ""
-
-    # Stop and remove any previous attack container to ensure a clean start
-    echo -e "${GREEN}Cleaning up old attack container...${NC}"
-    docker rm -f "$attack_type-attacker" 2>/dev/null || true
-
-    # Build attacker image if it doesn't exist
-    if ! docker images --format '{{.Repository}}:{{.Tag}}' | grep -q "http2-attacker:latest"; then
-        echo -e "${GREEN}Building attacker image...${NC}"
-        docker build -t http2-attacker:latest -f shared/docker/Dockerfile.attacker shared/docker/
-    fi
-
-    # Run the attack directly as the main container process
-    echo -e "${GREEN}🚀 Launching $attack_type attack...${NC}"
     
-    docker run -d --name "$attack_type-attacker" \
-        --network http2-flow-control-lab \
-        -v "$(pwd)/attacks/$attack_type:/workspace/attack" \
-        -v "$(pwd)/shared:/workspace/shared" \
-        -e PYTHONUNBUFFERED=1 \
-        http2-attacker:latest \
-        python3 "/workspace/attack/${ATTACK_SCRIPT}" apache-victim --port 80 --connections "$connections" --verbose
-
+    # Check if attack container exists, create if needed
+    if ! docker ps -a --format '{{.Names}}' | grep -q "$attack_type-attacker"; then
+        echo -e "${GREEN}Creating attack container...${NC}"
+        
+        # Clean any old containers
+        docker rm -f $attack_type-attacker 2>/dev/null || true
+        
+        # Build attacker image if it doesn't exist
+        if ! docker images --format '{{.Repository}}:{{.Tag}}' | grep -q "http2-attacker:latest"; then
+            docker build -t http2-attacker:latest -f shared/docker/Dockerfile.attacker shared/docker/
+        fi
+        
+        # Run attack container
+        docker run -d --name $attack_type-attacker \
+            --network http2-flow-control-lab \
+            -v "$(pwd)/attacks/$attack_type:/workspace/attack" \
+            -v "$(pwd)/shared:/workspace/shared" \
+            -v "$(pwd)/logs:/tmp/logs" \
+            -e PYTHONUNBUFFERED=1 \
+            http2-attacker:latest \
+            tail -f /dev/null
+        
+        sleep 3
+    fi
+    
+    # Run the attack
+    echo -e "${GREEN}🚀 Launching $attack_type attack...${NC}"
+    echo -e "${BLUE}Command: python3 /workspace/attack/${ATTACK_SCRIPT} apache-victim --port 80 --connections $connections --verbose${NC}"
     echo ""
+    
+    docker exec -d $attack_type-attacker \
+        python3 /workspace/attack/${ATTACK_SCRIPT} apache-victim --port 80 --connections $connections --verbose
+    
     echo -e "${GREEN}✅ Attack launched in background!${NC}"
     echo ""
     echo -e "${BLUE}📊 Monitor with:${NC}"
-    echo "• Attack logs: ./deploy-attack.sh $attack_type local --logs"
+    echo "• Attack logs: $0 $attack_type local --logs"
     echo "• Server status: ./deploy-server.sh local $attack_type --status"
-    echo "• Stop attack: ./deploy-attack.sh $attack_type local --stop"
+    echo "• Stop attack: $0 $attack_type local --stop"
 }
 
 deploy_remote_attack() {
