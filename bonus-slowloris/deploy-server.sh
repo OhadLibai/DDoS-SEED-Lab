@@ -337,7 +337,7 @@ sudo docker build -t slowloris-${server_type}-server .
 sudo docker run -d \\
     --name slowloris-${server_type}-server \\
     --network bridge \\
-    -p $port:8080 \\
+    -p $port:80 \\
     slowloris-${server_type}-server
 
 echo "Server deployed successfully"
