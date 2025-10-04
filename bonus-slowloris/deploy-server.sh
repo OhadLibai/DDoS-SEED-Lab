@@ -261,12 +261,17 @@ deploy_gcp_server() {
     local server_type="$1"
     local port="$2"
     
-    if [ ! -f ".gcp-config" ]; then
-        log_error "No .gcp-config found. Run './setup-gcp-infrastructure.sh' first."
+    if [ -f "gcp.env" ]; then
+        log_info "Loading GCP configuration from gcp.env"
+        source gcp.env
+    elif [ -f ".gcp-config" ]; then
+        log_info "Loading GCP configuration from .gcp-config (deprecated - consider renaming to gcp.env)"
+        source .gcp-config
+    else
+        log_error "No gcp.env found. Run './setup-gcp-infrastructure.sh' first to create your GCP configuration."
+        log_info "The gcp.env file should contain: GCP_VM_NAME, GCP_ZONE, and GCP_PROJECT_ID"
         return 1
     fi
-    
-    source .gcp-config
     
     local project=$(gcloud config get-value project 2>/dev/null)
     if [ -z "$project" ]; then
