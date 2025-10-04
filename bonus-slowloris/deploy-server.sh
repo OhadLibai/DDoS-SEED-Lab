@@ -8,9 +8,20 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
-if [-f "gcp.env"]; then
+if [ -f "gcp.env" ]; then
     FILE=gcp.env && cp -- "$FILE" "$FILE.bak" \
-    && sed -E 's/^([A-Za-z_][A-Za-z0-9_]*)=.*: *([^[:space:]].*)$/\1=\2/' "$FILE" \
+    && sed -E '
+        # Remove ANSI color codes
+        s/\x1b\[[0-9;]*[mGKH]//g
+        # Remove timestamps like [2025-10-04 10:30:15]
+        s/\[[0-9]{4}-[0-9]{2}-[0-9]{2}[^]]*\]//g
+        # Remove any leading whitespace/control characters
+        s/^[[:space:][:cntrl:]]+//
+        # Extract variable assignments: VAR=anything: value -> VAR=value
+        s/^([A-Za-z_][A-Za-z0-9_]*)=.*:[[:space:]]*([^[:space:]].*)$/\1=\2/
+        # Also handle simple VAR=value (no colon)
+        s/^([A-Za-z_][A-Za-z0-9_]*)=([^[:space:]].*)/\1=\2/
+    ' "$FILE" \
     | grep -E '^[[:space:]]*#|^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=' \
     > "$FILE.clean" \
     && mv -- "$FILE.clean" "$FILE"
@@ -18,7 +29,13 @@ fi
 
 if [ -f ".gcp-config" ]; then
     FILE=.gcp-config && cp -- "$FILE" "$FILE.bak" \
-    && sed -E 's/^([A-Za-z_][A-Za-z0-9_]*)=.*: *([^[:space:]].*)$/\1=\2/' "$FILE" \
+    && sed -E '
+        s/\x1b\[[0-9;]*[mGKH]//g
+        s/\[[0-9]{4}-[0-9]{2}-[0-9]{2}[^]]*\]//g
+        s/^[[:space:][:cntrl:]]+//
+        s/^([A-Za-z_][A-Za-z0-9_]*)=.*:[[:space:]]*([^[:space:]].*)$/\1=\2/
+        s/^([A-Za-z_][A-Za-z0-9_]*)=([^[:space:]].*)/\1=\2/
+    ' "$FILE" \
     | grep -E '^[[:space:]]*#|^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=' \
     > "$FILE.clean" \
     && mv -- "$FILE.clean" "$FILE"
