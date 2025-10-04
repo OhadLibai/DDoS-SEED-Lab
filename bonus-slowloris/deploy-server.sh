@@ -8,6 +8,22 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+if [-f "gcp.env"]; then
+    FILE=gcp.env && cp -- "$FILE" "$FILE.bak" \
+    && sed -E 's/^([A-Za-z_][A-Za-z0-9_]*)=.*: *([^[:space:]].*)$/\1=\2/' "$FILE" \
+    | grep -E '^[[:space:]]*#|^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=' \
+    > "$FILE.clean" \
+    && mv -- "$FILE.clean" "$FILE"
+fi
+
+if [ -f ".gcp-config" ]; then
+    FILE=.gcp-config && cp -- "$FILE" "$FILE.bak" \
+    && sed -E 's/^([A-Za-z_][A-Za-z0-9_]*)=.*: *([^[:space:]].*)$/\1=\2/' "$FILE" \
+    | grep -E '^[[:space:]]*#|^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=' \
+    > "$FILE.clean" \
+    && mv -- "$FILE.clean" "$FILE"
+fi
+
 
 # Load GCP configuration if available, otherwise use defaults
 if [ -f "gcp.env" ]; then
