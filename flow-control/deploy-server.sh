@@ -181,10 +181,20 @@ deploy_gcp_server() {
     echo -e "${GREEN}Deploying $attack_type server on GCP...${NC}"
     
     # Copy attack-specific docker-compose file to GCP instance
+    # Create directory and set permissions on GCP VM
+    gcloud compute ssh ubuntu@$INFRASTRUCTURE_NAME --zone=$INSTANCE_ZONE --quiet --command="
+        sudo mkdir -p /opt/http2-labs
+        sudo chown ubuntu:ubuntu /opt/http2-labs
+        sudo chmod 755 /opt/http2-labs
+    "
+
+    # Now copy the file
     gcloud compute scp attacks/$attack_type/docker-compose.yml ubuntu@$INFRASTRUCTURE_NAME:/opt/http2-labs/docker-compose-$attack_type.yml --zone=$INSTANCE_ZONE --quiet
-    
+
+    # Run commands in the directory
     gcloud compute ssh ubuntu@$INFRASTRUCTURE_NAME --zone=$INSTANCE_ZONE --quiet --command="
         cd /opt/http2-labs
+    "
         
         # Stop any existing containers
         docker-compose down 2>/dev/null || true
