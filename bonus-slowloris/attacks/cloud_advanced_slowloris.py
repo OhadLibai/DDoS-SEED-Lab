@@ -51,7 +51,7 @@ class AttackState:
 class SocketWorker(threading.Thread):
     """
     A worker thread to manage the lifecycle of a single socket.
-    It incorporates evasion techniques from the cloud script.
+    It incorporates evasion techniques.
     """
     def __init__(self, target_ip, target_port, header_size, attack_state, worker_id):
         super().__init__()
