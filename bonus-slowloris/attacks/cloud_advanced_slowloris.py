@@ -84,7 +84,7 @@ class SocketWorker(threading.Thread):
 
     def generate_keep_alive_header(self):
         """Generates a plausible-looking header to keep the connection open."""
-        # This uses the concept of "steganographic" headers from the cloud script.
+        # This uses the concept of "steganographic" headers.
         # Instead of a simple "X-a: b", it sends headers that might be ignored but
         # are not immediately suspicious.
         headers = [
