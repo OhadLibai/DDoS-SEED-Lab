@@ -1,6 +1,6 @@
 # DDoS SEED Lab - HTTP/2 Protocol Vulnerability Studies
-*Copyright (C) 2025 Libai Ohad*  
-*Copyright (C) 2025 Ben Zion Roei*
+*Libai Ohad*  
+*Ben Zion Roei*
 
 ---
 A comprehensive educational laboratory suite for exploring Distributed Denial of Service (DDoS) attacks targeting HTTP/2 protocol vulnerabilities. This lab collection provides hands-on experience with modern web protocol exploitation techniques through controlled local environments and real-world cloud deployments.
