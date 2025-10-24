@@ -359,11 +359,13 @@ if [ "$PROTECTED_MODE" = true ]; then
     
     print_info "Attaching Instance Group to Backend Service..."
     # Check if backend already exists to avoid error
-    if ! gcloud compute backend-services list-backends $BES_NAME --global | grep -q $IG_NAME; then
+    if ! gcloud compute backend-services describe $BES_NAME --global --format="value(backends.group)" | grep -q $IG_NAME; then
         gcloud compute backend-services add-backend $BES_NAME \
             --instance-group $IG_NAME \
             --instance-group-zone $ZONE \
             --global
+    else
+        print_warning "Instance Group '$IG_NAME' is already attached to Backend Service '$BES_NAME'. Skipping."
     fi
     
     print_info "Creating URL Map..."
