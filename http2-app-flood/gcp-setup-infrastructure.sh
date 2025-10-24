@@ -280,8 +280,8 @@ if [ "$PROTECTED_MODE" = true ]; then
     # 2. Create Cloud NAT (for outbound internet)
     print_info "Ensuring Cloud NAT Gateway '$NAT_NAME' exists..."
     print_warning "Cloud NAT incurs small costs. Remember to delete it after the lab."
-    if ! gcloud compute nats describe $NAT_NAME --router=$ROUTER_NAME --region=$REGION &>/dev/null; then
-        gcloud compute nats create $NAT_NAME \
+    if ! gcloud compute routers nats describe $NAT_NAME --router=$ROUTER_NAME --region=$REGION &>/dev/null; then
+        gcloud compute routers nats create $NAT_NAME \
             --router=$ROUTER_NAME \
             --auto-allocate-nat-external-ips \
             --nat-all-subnet-ip-ranges \
