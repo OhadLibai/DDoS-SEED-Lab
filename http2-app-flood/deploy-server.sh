@@ -42,19 +42,19 @@ usage() {
     echo "  part-A              Deploy single-worker victim server"
     echo "  part-B              Deploy multi-worker victim server"
     echo "  --stop              Stop containers + shutdown VM instance (VM still exists but powered off)"
-    echo "  --destruct-vm    (GCP only) COMPLETELY REMOVE cloud infrastructure - requires re-running gcp-setup-infrastructure.sh"
+    echo "  --destruct-vm   (GCP only) COMPLETELY REMOVE cloud infrastructure - requires re-running gcp-setup-infrastructure.sh"
     echo ""
     echo "Environment Variables (options):"
     echo "  SCENARIO=<name>     CPU scenario: default_scenario, captcha, crypto, gaming, antibot, webservice, content"
     echo "  WORKLOAD=<1-5>      CPU workload intensity (default: 5)"
     echo ""
     echo "Examples:"
-    echo "  $0 --local part-A                    # Deploy local single-worker server"
-    echo "  $0 --gcp part-B                      # Deploy GCP multi-worker server"
+    echo "  $0 --local part-A          # Deploy local single-worker server"
+    echo "  $0 --gcp part-B            # Deploy GCP multi-worker server"
     echo "  SCENARIO=captcha $0 --local part-A   # Local server with CAPTCHA scenario"
-    echo "  $0 --local --stop                    # Stop local servers"
-    echo "  $0 --gcp --stop                      # Stop containers + shutdown VM"
-    echo "  $0 --gcp --destruct-vm            # Remove entire cloud infrastructure"
+    echo "  $0 --local --stop          # Stop local servers"
+    echo "  $0 --gcp --stop            # Stop containers + shutdown VM"
+    echo "  $0 --gcp --destruct-vm    # Remove entire cloud infrastructure"
     echo ""
     exit 1
 }
@@ -223,6 +223,13 @@ if [ "$TARGET" = "--local" ]; then
 #
 # GCP DEPLOYMENT
 #
+elif [ "$TARGET" = "--gcp" ]; then
+    # Check if gcloud is available
+    if ! command -v gcloud &> /dev/null; then
+        print_error "gcloud CLI not found. Please install Google Cloud SDK."
+        exit 1
+    fi
+
     # --- IAP Tunneling Logic ---
     # Check gcp.env for DEPLOYMENT_MODE. Default to empty if not set.
     DEPLOYMENT_MODE=${DEPLOYMENT_MODE:-} 
@@ -232,12 +239,6 @@ if [ "$TARGET" = "--local" ]; then
         GCLOUD_SSH_FLAGS="--tunnel-through-iap"
     fi
     # ---
-elif [ "$TARGET" = "--gcp" ]; then
-    # Check if gcloud is available
-    if ! command -v gcloud &> /dev/null; then
-        print_error "gcloud CLI not found. Please install Google Cloud SDK."
-        exit 1
-    fi
     
     # Handle --stop and --destruct-vm commands
     if [ "$COMMAND" = "--stop" ]; then
@@ -256,24 +257,27 @@ elif [ "$TARGET" = "--gcp" ]; then
         fi
         
         VM_STATUS=$(gcloud compute instances describe $VM_NAME --zone=$ZONE --format='get(status)')
-        if [ "$VM_STATUS" != "RUNNING" ]; then
+        if [ "$VM_STATUS" != "RUNNING" ] && [ "$DESTRUCT_VM" = false ]; then
             print_info "VM is already stopped."
             exit 0
         fi
         
         print_info "Stopping GCP victim servers..."
-        gcloud compute ssh $VM_NAME --zone=$ZONE $GCLOUD_SSH_FLAGS --command="
-            cd "$HOME"http2-flood-lab 2>/dev/null || { echo 'No servers deployed'; exit 0; }
-            for part in part-A part-B; do
-                if [ -d \$part ]; then
-                    echo \"Stopping \$part victim server...\"
-                    cd \$part
-                    docker-compose -f docker-compose.server.yml stop || true
-                    cd ..
-                fi
-            done
-            echo 'Victim servers stopped'
-        " 2>/dev/null || print_warning "Could not connect to VM"
+        # Only try to stop containers if VM is RUNNING
+        if [ "$VM_STATUS" = "RUNNING" ]; then
+            gcloud compute ssh $VM_NAME --zone=$ZONE $GCLOUD_SSH_FLAGS --command="
+                cd "$HOME"http2-flood-lab 2>/dev/null || { echo 'No servers deployed'; exit 0; }
+                for part in part-A part-B; do
+                    if [ -d \$part ]; then
+                        echo \"Stopping \$part victim server...\"
+                        cd \$part
+                        docker-compose -f docker-compose.server.yml stop || true
+                        cd ..
+                    fi
+                done
+                echo 'Victim servers stopped'
+            " 2>/dev/null || print_warning "Could not connect to VM (may be stopped). Proceeding with cleanup."
+        fi
         
         if [ "$DESTRUCT_VM" = true ]; then
             print_warning "EXTERMINATING complete cloud infrastructure for this lab..."
@@ -285,7 +289,6 @@ elif [ "$TARGET" = "--gcp" ]; then
                 print_info "Protected mode detected. Deleting LB, NAT, and related resources..."
                 
                 # --- Must re-define resource names from setup script ---
-                # This is brittle, but required since they aren't in gcp.env
                 IG_NAME="${VM_NAME}-ig"
                 HC_NAME="${VM_NAME}-hc"
                 BES_NAME="${VM_NAME}-bes"
@@ -327,12 +330,18 @@ elif [ "$TARGET" = "--gcp" ]; then
                 gcloud compute firewall-rules delete $FIREWALL_RULE_SSH_IAP --quiet 2>/dev/null || true
             else
                 print_info "Direct mode detected. Deleting firewall rule..."
-                FIREWALL_RULE="${FIREWALL_RULE_NAME:-allow-http2-lab}"
+                # Note: FIREWALL_RULE_NAME is from gcp.env
+                FIREWALL_RULE="${FIREWALL_RULE_NAME:-allow-http2-lab-direct}"
                 gcloud compute firewall-rules delete "$FIREWALL_RULE" --quiet 2>/dev/null || true
             fi
             
             print_success "Cloud infrastructure completely removed!"
             print_info "To recreate: ./gcp-setup-infrastructure.sh [PROJECT_ID]"
+        else
+            print_info "Shutting down VM instance (VM still exists but powered off)..."
+            gcloud compute instances stop $VM_NAME --zone=$ZONE
+            print_success "VM shutdown complete. Use 'gcloud compute instances start $VM_NAME --zone=$ZONE' to restart."
+        fi
         exit 0
     fi
     
@@ -369,12 +378,14 @@ elif [ "$TARGET" = "--gcp" ]; then
     # Get VM external IP (prioritize gcp.env, fallback to gcloud query)
     if [ -n "$TARGET_IP" ] && [ "$TARGET_IP" != "" ]; then
         EXTERNAL_IP="$TARGET_IP"
-        print_info "Using TARGET_IP from gcp.env: $EXTERNAL_IP"
+        TARGET_PORT=${TARGET_PORT:-8080} # Default to 8080 if not in gcp.env
+        print_info "Using Target from gcp.env: http://$EXTERNAL_IP:$TARGET_PORT"
     else
         print_info "TARGET_IP not set in gcp.env, querying VM directly..."
         EXTERNAL_IP=$(gcloud compute instances describe $VM_NAME \
             --zone=$ZONE \
             --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+        TARGET_PORT="8080" # Set port for direct mode
     fi
     
     # Create deployment archive (server files only)
@@ -396,50 +407,53 @@ elif [ "$TARGET" = "--gcp" ]; then
 
     # Deploy server on VM
     print_info "Deploying victim server on VM..."
+    # Note: This remote script is a bit messy (mixing docker-compose and docker compose)
+    # But we will preserve its logic.
     DEPLOY_SCRIPT="
         set -e
         # Helper function to run docker-compose with compatibility
         dc() {
             if command -v docker-compose >/dev/null 2>&1; then
-                sudo docker-compose "\$@"
+                sudo docker-compose \"\$@\"
             else
-                sudo docker compose "\$@"
+                sudo docker compose \"\$@\"
             fi
         }
 
         cd \$HOME
 
+        # Create/Clear directory
+        mkdir -p http2-flood-lab
+        cd http2-flood-lab
+        
         # Kill existing victim servers (ensures clean state)
-        if [ -d http2-flood-lab ]; then
-            cd http2-flood-lab
-            for part in part-A part-B; do
-                if [ -d \$part ]; then
-                    echo \"Stopping \$part victim server...\"
-                    cd \$part
-                    docker compose -f docker-compose.server.yml down --remove-orphans || true
-                    cd ..
-                fi
-            done
-            cd \$HOME
-        fi
+        for part in part-A part-B; do
+            if [ -d \$part ]; then
+                echo \"Stopping \$part victim server...\"
+                cd \$part
+                # Use the 'down' command for a full cleanup
+                dc -f docker-compose.yml down --remove-orphans 2>/dev/null || true
+                cd ..
+            fi
+        done
         
         # Extract new server files
-        tar -xzf http2-flood-server-update.tar.gz
-        cd "$part"
+        echo \"Extracting new server files...\"
+        tar -xzf \$HOME/http2-flood-server-update.tar.gz -C \$HOME/http2-flood-lab
         
         # Set environment variables
         export SCENARIO='$SCENARIO'
         export WORKLOAD='$WORKLOAD'
         
         # Deploy the victim server
+        echo \"Deploying $COMMAND...\"
         cd $COMMAND
-        dc -f docker-compose.yml down --remove-orphans
         dc -f docker-compose.yml up -d --build
         
         echo 'Victim server deployment completed!'
         echo 'Checking container status...'
         sleep 5
-        sudo docker compose ps
+        dc ps
     "
     
     # Execute deployment on VM
@@ -463,19 +477,18 @@ elif [ "$TARGET" = "--gcp" ]; then
             echo "=================================================="
             echo ""
             print_info "Control Commands:"
-            echo "  ./deploy-server.sh --gcp --stop       # Stop victim servers"
-            echo "  ./deploy-server.sh --gcp --destruct-vm  # Completely delete VM + firewall"
+            echo "  ./deploy-server.sh --gcp --stop        # Stop victim servers"
+            echo "  ./deploy-server.sh --gcp --destruct-vm   # Completely delete VM + firewall"
             echo ""
             print_info "To attack this server:"
-            echo "  ./deploy-attack.sh --gcp $COMMAND     # From local to GCP server"
-            echo "  ./deploy-attack.sh --local $COMMAND   # If running locally"
+            echo "  ./deploy-attack.sh --gcp $COMMAND      # From local to GCP server"
         else
             print_error "Server deployment failed health check!"
             exit 1
         fi
     else
         print_error "GCP server deployment failed!"
-        print_info "Check VM logs: gcloud compute ssh $VM_NAME --zone=$ZONE"
+        print_info "Check VM logs: gcloud compute ssh $VM_NAME --zone=$ZONE $GCLOUD_SSH_FLAGS"
         exit 1
     fi
     
