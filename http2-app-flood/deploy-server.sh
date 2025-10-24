@@ -28,6 +28,14 @@ else
     VM_NAME="http2-flood-lab"
     ZONE="us-central1-a"
 fi
+
+else
+     print_info "gcp.env not found, using hardcoded defaults"
+    print_info "Run './gcp-setup-infrastructure.sh' to create proper configuration"
+    VM_NAME="http2-flood-lab"
+    ZONE="us-central1-a"
+fi
+
 # Define an empty IAP_FLAG
 IAP_FLAG=""
 # Check if gcp.env was loaded AND we are in protected mode
