@@ -181,7 +181,7 @@ deploy_gcp_server() {
     echo -e "${GREEN}Deploying $attack_type server on GCP...${NC}"
     
     # Copy attack-specific docker-compose file to GCP instance
-    # Create directory and set permissions on GCP VM
+# Create directory and set permissions on GCP VM
     gcloud compute ssh ubuntu@$INFRASTRUCTURE_NAME --zone=$INSTANCE_ZONE --quiet --command="
         sudo mkdir -p /opt/http2-labs
         sudo chown ubuntu:ubuntu /opt/http2-labs
