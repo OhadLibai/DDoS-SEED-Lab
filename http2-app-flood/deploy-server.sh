@@ -29,22 +29,6 @@ else
     ZONE="us-central1-a"
 fi
 
-else
-     print_info "gcp.env not found, using hardcoded defaults"
-    print_info "Run './gcp-setup-infrastructure.sh' to create proper configuration"
-    VM_NAME="http2-flood-lab"
-    ZONE="us-central1-a"
-fi
-
-# Define an empty IAP_FLAG
-IAP_FLAG=""
-# Check if gcp.env was loaded AND we are in protected mode
-if [ -f "gcp.env" ] && [[ "$DEPLOYMENT_MODE" == *"Protected"* ]]; then
-    print_info "Protected Mode detected: SSH/SCP will use IAP Tunnel."
-    IAP_FLAG="--tunnel-through-iap"
-fi
-# --- END ADDED BLOCK ---
-
 usage() {
     echo "HTTP/2 Flood Lab - Server-Only Deployment"
     echo ""
@@ -239,9 +223,6 @@ if [ "$TARGET" = "--local" ]; then
 #
 # GCP DEPLOYMENT
 #
-#
-# GCP DEPLOYMENT
-#
 elif [ "$TARGET" = "--gcp" ]; then
     # Check if gcloud is available
     if ! command -v gcloud &> /dev/null; then
@@ -268,67 +249,31 @@ elif [ "$TARGET" = "--gcp" ]; then
         VM_STATUS=$(gcloud compute instances describe $VM_NAME --zone=$ZONE --format='get(status)')
         if [ "$VM_STATUS" != "RUNNING" ]; then
             print_info "VM is already stopped."
-            
-            # Allow --destruct-vm even if VM is stopped
-            if [ "$DESTRUCT_VM" = false ]; then
-                exit 0
-            fi
+            exit 0
         fi
         
-        # Stop containers only if VM is running
-        if [ "$VM_STATUS" == "RUNNING" ]; then
-            print_info "Stopping GCP victim servers..."
-            # *** CHANGED: Added $IAP_FLAG ***
-            gcloud compute ssh $VM_NAME --zone=$ZONE $IAP_FLAG --command="
-                cd \$HOME 2>/dev/null || { echo 'No servers deployed'; exit 0; }
-                for part in part-A part-B; do
-                    if [ -d \$part ]; then
-                        echo \"Stopping \$part victim server...\"
-                        cd \$part
-                        # Handle docker compose v1 vs v2
-                        if command -v docker-compose >/dev/null 2>&1; then
-                            sudo docker-compose down --remove-orphans || true
-                        else
-                            sudo docker compose down --remove-orphans || true
-                        fi
-                        cd ..
-                    fi
-                done
-                echo 'Victim servers stopped'
-            " 2>/dev/null || print_warning "Could not connect to VM (or no servers running)"
-        fi
+        print_info "Stopping GCP victim servers..."
+        gcloud compute ssh $VM_NAME --zone=$ZONE --command="
+            cd "$HOME"http2-flood-lab 2>/dev/null || { echo 'No servers deployed'; exit 0; }
+            for part in part-A part-B; do
+                if [ -d \$part ]; then
+                    echo \"Stopping \$part victim server...\"
+                    cd \$part
+                    docker-compose -f docker-compose.server.yml stop || true
+                    cd ..
+                fi
+            done
+            echo 'Victim servers stopped'
+        " 2>/dev/null || print_warning "Could not connect to VM"
         
         if [ "$DESTRUCT_VM" = true ]; then
             print_warning "EXTERMINATING complete cloud infrastructure for this lab..."
-            print_warning "This will delete the VM, Load Balancer, NAT, Router, etc."
             print_info "Deleting VM instance..."
             gcloud compute instances delete $VM_NAME --zone=$ZONE --quiet
             
-            print_info "Deleting firewall rules..."
-            gcloud compute firewall-rules delete $FIREWALL_RULE_DIRECT_VM --quiet 2>/dev/null || true
-            gcloud compute firewall-rules delete $FIREWALL_RULE_LB --quiet 2>/dev/null || true
-            gcloud compute firewall-rules delete $FIREWALL_RULE_SSH_IAP --quiet 2>/dev/null || true
-            
-            # --- ADDED: Delete protected mode resources ---
-            if [[ "$DEPLOYMENT_MODE" == *"Protected"* ]]; then
-                print_info "Deleting Load Balancer components (Frontend, Proxy, URL-Map, Backend)..."
-                gcloud compute forwarding-rules delete $FW_RULE_NAME --global --quiet 2>/dev/null || true
-                gcloud compute target-http-proxies delete $TP_NAME --quiet 2>/dev/null || true
-                gcloud compute url-maps delete $UM_NAME --quiet 2>/dev/null || true
-                gcloud compute backend-services delete $BES_NAME --global --quiet 2>/dev/null || true
-                
-                print_info "Deleting Health Check and Static IP..."
-                gcloud compute health-checks delete $HC_NAME --quiet 2>/dev/null || true
-                gcloud compute addresses delete $LB_IP_NAME --global --quiet 2>/dev/null || true
-                
-                print_info "Deleting Instance Group..."
-                gcloud compute instance-groups unmanaged delete $IG_NAME --zone=$ZONE --quiet 2>/dev/null || true
-
-                print_info "Deleting Cloud NAT and Cloud Router..."
-                gcloud compute routers nats delete $NAT_NAME --router=$ROUTER_NAME --region=$REGION --quiet 2>/dev/null || true
-                gcloud compute routers delete $ROUTER_NAME --region=$REGION --quiet 2>/dev/null || true
-            fi
-            # --- END ADDED BLOCK ---
+            print_info "Deleting firewall rule..."
+            FIREWALL_RULE="${FIREWALL_RULE_NAME:-allow-http2-lab}"
+            gcloud compute firewall-rules delete "$FIREWALL_RULE" --quiet 2>/dev/null || true
             
             print_success "Cloud infrastructure completely removed!"
             print_info "To recreate: ./gcp-setup-infrastructure.sh YOUR_PROJECT_ID"
@@ -351,7 +296,7 @@ elif [ "$TARGET" = "--gcp" ]; then
         print_error "VM '$VM_NAME' not found in zone '$ZONE'!"
         if [ -f "gcp.env" ]; then
             print_error "Configuration loaded from gcp.env may be outdated."
-            print_info "Try regenerating: ./gcp-setup-infrastructure.sh --force"
+            print_info "Try regenerating: ./gcp-setup-infrastructure.sh"
         else
             print_info "Run './gcp-setup-infrastructure.sh' first to create the infrastructure."
         fi
@@ -370,15 +315,16 @@ elif [ "$TARGET" = "--gcp" ]; then
     print_info "Deploying HTTP/2 Victim Server - $COMMAND (GCP)"
     print_info "Configuration: Scenario=$SCENARIO, Server Workload=$WORKLOAD"
     
-    # *** CHANGED: Simplified IP/Port logic ***
-    # We MUST have gcp.env for this to work
-    if [ ! -f "gcp.env" ] || [ -z "$TARGET_IP" ] || [ -z "$TARGET_PORT" ]; then
-        print_error "gcp.env file not found or TARGET_IP/TARGET_PORT is missing."
-        print_info "Please run './gcp-setup-infrastructure.sh' first."
-        exit 1
+    # Get VM external IP (prioritize gcp.env, fallback to gcloud query)
+    if [ -n "$TARGET_IP" ] && [ "$TARGET_IP" != "" ]; then
+        EXTERNAL_IP="$TARGET_IP"
+        print_info "Using TARGET_IP from gcp.env: $EXTERNAL_IP"
+    else
+        print_info "TARGET_IP not set in gcp.env, querying VM directly..."
+        EXTERNAL_IP=$(gcloud compute instances describe $VM_NAME \
+            --zone=$ZONE \
+            --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
     fi
-    print_info "Target Endpoint (from gcp.env): http://$TARGET_IP:$TARGET_PORT"
-    
     
     # Create deployment archive (server files only)
     print_info "Preparing server files for upload..."
@@ -394,8 +340,7 @@ elif [ "$TARGET" = "--gcp" ]; then
     
     # Upload server files to VM
     print_info "Uploading server files to VM..."
-    # *** CHANGED: Added $IAP_FLAG ***
-    gcloud compute scp $TAR_FILE $VM_NAME:"$HOME"/http2-flood-server-update.tar.gz --zone=$ZONE $IAP_FLAG
+    gcloud compute scp $TAR_FILE $VM_NAME:"$HOME"/http2-flood-server-update.tar.gz --zone=$ZONE
 
 
     # Deploy server on VM
@@ -405,29 +350,31 @@ elif [ "$TARGET" = "--gcp" ]; then
         # Helper function to run docker-compose with compatibility
         dc() {
             if command -v docker-compose >/dev/null 2>&1; then
-                sudo docker-compose \"\$@\"
+                sudo docker-compose "\$@"
             else
-                sudo docker compose \"\$@\"
+                sudo docker compose "\$@"
             fi
         }
 
         cd \$HOME
 
         # Kill existing victim servers (ensures clean state)
-        for part in part-A part-B; do
-            if [ -d \$part ]; then
-                echo \"Stopping \$part victim server...\"
-                cd \$part
-                dc down --remove-orphans || true
-                cd ..
-            fi
-        done
+        if [ -d http2-flood-lab ]; then
+            cd http2-flood-lab
+            for part in part-A part-B; do
+                if [ -d \$part ]; then
+                    echo \"Stopping \$part victim server...\"
+                    cd \$part
+                    docker compose -f docker-compose.server.yml down --remove-orphans || true
+                    cd ..
+                fi
+            done
+            cd \$HOME
+        fi
         
         # Extract new server files
-        # This will overwrite $HOME/victims and $HOME/$COMMAND
         tar -xzf http2-flood-server-update.tar.gz
-        
-        # --- *** BUG FIX: Removed 'cd \"\$part\"' which was here *** ---
+        cd "$part"
         
         # Set environment variables
         export SCENARIO='$SCENARIO'
@@ -435,8 +382,8 @@ elif [ "$TARGET" = "--gcp" ]; then
         
         # Deploy the victim server
         cd $COMMAND
-        dc down --remove-orphans
-        dc up -d --build
+        dc -f docker-compose.yml down --remove-orphans
+        dc -f docker-compose.yml up -d --build
         
         echo 'Victim server deployment completed!'
         echo 'Checking container status...'
@@ -445,52 +392,45 @@ elif [ "$TARGET" = "--gcp" ]; then
     "
     
     # Execute deployment on VM
-    # *** CHANGED: Added $IAP_FLAG ***
-    if gcloud compute ssh $VM_NAME --zone=$ZONE $IAP_FLAG --command="$DEPLOY_SCRIPT"; then
+    if gcloud compute ssh $VM_NAME --zone=$ZONE --command="$DEPLOY_SCRIPT"; then
         # Health check
-        # *** CHANGED: Using $TARGET_IP:$TARGET_PORT ***
-        if check_http2_server "http://$TARGET_IP:$TARGET_PORT"; then
+        if check_http2_server "http://$EXTERNAL_IP:8080"; then
             print_success "GCP victim server deployment completed successfully!"
             echo ""
-            # *** CHANGED: Using $TARGET_IP:$TARGET_PORT ***
-            print_success "Server is running at: http://$TARGET_IP:$TARGET_PORT"
-            print_info "Health check: curl --http2-prior-knowledge http://$TARGET_IP:$TARGET_PORT/health"
+            print_success "Server is running at: http://$EXTERNAL_IP:8080"
+            print_info "Health check: curl --http2-prior-knowledge http://$EXTERNAL_IP:8080/health"
             echo ""
             echo "=================================================="
             print_info "GCP Server Monitoring Commands:"
-            # *** CHANGED: Using $TARGET_IP:$TARGET_PORT ***
-            echo "  curl --http2-prior-knowledge --no-progress-meter -o /dev/null -w \"Time: %{time_total}s\n\" http://$TARGET_IP:$TARGET_PORT"
-            # *** CHANGED: Added $IAP_FLAG to all examples ***
-            echo "  gcloud compute ssh $VM_NAME --zone=$ZONE $IAP_FLAG --command=\"docker stats --no-stream\""
+            echo "  curl --http2-prior-knowledge --no-progress-meter -o /dev/null -w \"Time: %{time_total}s\n\" http://$EXTERNAL_IP:8080"
+            echo "  gcloud compute ssh $VM_NAME --zone=$ZONE --command=\"docker stats --no-stream\""
             if [[ "$COMMAND" == *"part-A"* ]]; then
-                echo "  gcloud compute ssh $VM_NAME --zone=$ZONE $IAP_FLAG --command=\"docker exec dev-victim-server sh -c \\\"awk 'NR>1 && \\\$4==\\\"01\\\" {count++} END {print count+0}' /proc/net/tcp\\\"\""
+                echo "  gcloud compute ssh $VM_NAME --zone=$ZONE --command=\"docker exec dev-victim-server sh -c \\\"awk 'NR>1 && \\\$4==\\\"01\\\" {count++} END {print count+0}' /proc/net/tcp\\\"\""
             else
-                echo "  gcloud compute ssh $VM_NAME --zone=$ZONE $IAP_FLAG --command=\"docker exec prod-victim-server sh -c \\\"awk 'NR>1 && \\\$4==\\\"01\\\" {count++} END {print count+0}' /proc/net/tcp\\\"\""
+                echo "  gcloud compute ssh $VM_NAME --zone=$ZONE --command=\"docker exec prod-victim-server sh -c \\\"awk 'NR>1 && \\\$4==\\\"01\\\" {count++} END {print count+0}' /proc/net/tcp\\\"\""
             fi
             echo "=================================================="
             echo ""
             print_info "Control Commands:"
-            echo "  ./deploy-server.sh --gcp --stop        # Stop victim servers"
-            echo "  ./deploy-server.sh --gcp --destruct-vm   # Completely delete VM + all infra"
+            echo "  ./deploy-server.sh --gcp --stop       # Stop victim servers"
+            echo "  ./deploy-server.sh --gcp --destruct-vm  # Completely delete VM + firewall"
             echo ""
             print_info "To attack this server:"
-            echo "  ./deploy-attack.sh --gcp $COMMAND      # From local to GCP server"
-            echo "  ./deploy-attack.sh --local $COMMAND    # If running locally"
+            echo "  ./deploy-attack.sh --gcp $COMMAND     # From local to GCP server"
+            echo "  ./deploy-attack.sh --local $COMMAND   # If running locally"
         else
             print_error "Server deployment failed health check!"
-            print_warning "This can happen if the LB is still provisioning."
-            print_info "Try checking the health URL manually in a few minutes:"
-            print_info "curl --http2-prior-knowledge http://$TARGET_IP:$TARGET_PORT/health"
             exit 1
         fi
     else
         print_error "GCP server deployment failed!"
-        print_info "Check VM logs: gcloud compute ssh $VM_NAME --zone=$ZONE $IAP_FLAG"
+        print_info "Check VM logs: gcloud compute ssh $VM_NAME --zone=$ZONE"
         exit 1
     fi
     
     # Clean up local temp file
     rm -f $TAR_FILE
     
-    print_info "Server deployment complete. VM will auto-shutdown in 2 hours."
+    print_info "Server deployment complete. VM will auto-shutdown in 2 hours if idle."
+
 fi
