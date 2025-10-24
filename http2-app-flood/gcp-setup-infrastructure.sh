@@ -11,10 +11,13 @@
 #    [ Internet ] -> [ Firewall: 0.0.0.0/0 ] -> [ VM: Public IP ]
 #
 # 2. Protected Mode (--with-protection):
-#    Creates an External Load Balancer (with Cloud Armor Standard DDoS protection).
-#    Creates a VM with NO public IP.
-#    Firewall is LOCKED DOWN, only allowing traffic from the Google LB and IAP.
+#    Creates a full mitigation stack:
+#    - Cloud Router + Cloud NAT (for outbound internet from the VM)
+#    - External Load Balancer (with Cloud Armor Standard DDoS protection)
+#    - A VM with NO public IP.
+#    - Secure firewalls (allowing only LB and IAP).
 #    [ Internet ] -> [ LB (Cloud Armor) ] -> [ Firewall: Google IPs ] -> [ VM: Private IP ]
+#    [ VM: Private IP ] -> [ Cloud NAT ] -> [ Internet (for Docker install) ]
 #
 
 set -e
@@ -52,6 +55,8 @@ UM_NAME="${VM_NAME}-url-map" # URL Map
 TP_NAME="${VM_NAME}-target-proxy" # Target Proxy
 LB_IP_NAME="${VM_NAME}-lb-ip" # Static IP for LB
 FW_RULE_NAME="${VM_NAME}-fw-rule" # Forwarding Rule
+ROUTER_NAME="${VM_NAME}-router" # Cloud Router
+NAT_NAME="${VM_NAME}-nat-gateway" # Cloud NAT
 
 # --- Function Definitions ---
 
@@ -111,7 +116,7 @@ usage() {
     echo ""
     echo "Options:"
     echo "  --with-protection   Enable mitigation: Deploy VM behind a Google Load Balancer"
-    echo "                      (Cloud Armor Standard) instead of a direct public IP."
+    echo "                      (Cloud Armor Standard) with Cloud NAT for egress."
     echo "  --force             Delete existing VM and create new one"
     echo "  --help              Show this help message"
     echo ""
@@ -179,7 +184,7 @@ fi
 print_info "Setting up HTTP/2 Flood Lab Infrastructure on GCP"
 print_info "Project ID: $PROJECT_ID"
 if [ "$PROTECTED_MODE" = true ]; then
-    print_warning "Mode: PROTECTED (with Load Balancer + Cloud Armor)"
+    print_warning "Mode: PROTECTED (with Load Balancer + Cloud Armor + Cloud NAT)"
 else
     print_info "Mode: DIRECT (VM with Public IP)"
 fi
@@ -220,20 +225,28 @@ cat > /tmp/startup-script.sh << 'EOF'
 # VM Setup Script for HTTP/2 Flood Lab
 
 set -e
+# Give network a few seconds to stabilize
+sleep 5
+
+echo "Running apt-get update..."
 apt-get update
 
 # Install Docker
+echo "Installing Docker..."
 curl -fsSL https://get.docker.com -o get-docker.sh
 sh get-docker.sh
 
 # Install Docker Compose
+echo "Installing Docker Compose..."
 curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
 
 # Install additional tools
+echo "Installing other tools..."
 apt-get install -y git curl htop
 
 # Create auto-shutdown (2 hours)
+echo "Setting auto-shutdown for 2 hours..."
 echo "sudo shutdown -h now" | at now + 2 hours
 
 # Signal completion
@@ -254,7 +267,30 @@ if [ "$PROTECTED_MODE" = true ]; then
     # --- PROTECTED MODE LOGIC ---
     print_info "Starting setup in PROTECTED mode..."
 
-    # 1. Create VM with NO public IP and the PROTECTED tag
+    # 1. Create Cloud Router (for NAT)
+    print_info "Ensuring Cloud Router '$ROUTER_NAME' exists..."
+    if ! gcloud compute routers describe $ROUTER_NAME --region=$REGION &>/dev/null; then
+        gcloud compute routers create $ROUTER_NAME \
+            --network default \
+            --region $REGION
+    else
+        print_warning "Cloud Router '$ROUTER_NAME' already exists."
+    fi
+
+    # 2. Create Cloud NAT (for outbound internet)
+    print_info "Ensuring Cloud NAT Gateway '$NAT_NAME' exists..."
+    print_warning "Cloud NAT incurs small costs. Remember to delete it after the lab."
+    if ! gcloud compute nats describe $NAT_NAME --router=$ROUTER_NAME --region=$REGION &>/dev/null; then
+        gcloud compute nats create $NAT_NAME \
+            --router=$ROUTER_NAME \
+            --auto-allocate-nat-external-ips \
+            --nat-all-subnet-ip-ranges \
+            --region $REGION
+    else
+        print_warning "Cloud NAT Gateway '$NAT_NAME' already exists."
+    fi
+
+    # 3. Create VM with NO public IP and the PROTECTED tag
     print_info "Creating VM instance (without public IP)..."
     gcloud compute instances create $VM_NAME \
         --zone=$ZONE \
@@ -268,12 +304,15 @@ if [ "$PROTECTED_MODE" = true ]; then
         --scopes=https://www.googleapis.com/auth/cloud-platform \
         --no-address # <-- THIS IS THE KEY
     
-    # 2. Create Instance Group and add VM
+    # 4. Create Instance Group and add VM
     print_info "Creating Unmanaged Instance Group..."
-    gcloud compute instance-groups unmanaged create $IG_NAME --zone=$ZONE
+    # --force might leave this, so check first
+    if ! gcloud compute instance-groups unmanaged describe $IG_NAME --zone=$ZONE &>/dev/null; then
+      gcloud compute instance-groups unmanaged create $IG_NAME --zone=$ZONE
+    fi
     gcloud compute instance-groups unmanaged add-instances $IG_NAME --zone=$ZONE --instances=$VM_NAME
     
-    # 3. Create SECURE firewall rule (Allow LB)
+    # 5. Create SECURE firewall rule (Allow LB)
     print_info "Creating firewall rule to allow Load Balancer..."
     if ! gcloud compute firewall-rules describe $FIREWALL_RULE_LB &>/dev/null; then
         gcloud compute firewall-rules create $FIREWALL_RULE_LB \
@@ -285,7 +324,7 @@ if [ "$PROTECTED_MODE" = true ]; then
         print_warning "Firewall rule '$FIREWALL_RULE_LB' already exists."
     fi
 
-    # 4. Create SECURE firewall rule (Allow IAP for SSH)
+    # 6. Create SECURE firewall rule (Allow IAP for SSH)
     print_info "Creating firewall rule to allow IAP for SSH..."
     if ! gcloud compute firewall-rules describe $FIREWALL_RULE_SSH_IAP &>/dev/null; then
         gcloud compute firewall-rules create $FIREWALL_RULE_SSH_IAP \
@@ -297,8 +336,7 @@ if [ "$PROTECTED_MODE" = true ]; then
         print_warning "Firewall rule '$FIREWALL_RULE_SSH_IAP' already exists."
     fi
 
-    # 5. Create Load Balancer components
-    # We must check for existence for all, as --force only deletes the VM
+    # 7. Create Load Balancer components
     
     print_info "Creating Global Static IP for Load Balancer..."
     if ! gcloud compute addresses describe $LB_IP_NAME --global &>/dev/null; then
