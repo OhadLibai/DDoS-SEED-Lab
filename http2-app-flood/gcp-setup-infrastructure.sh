@@ -1,6 +1,21 @@
 #!/bin/bash
 # HTTP/2 Flood Lab - GCP Infrastructure Setup (One-Time)
 # Creates VM and prepares environment for server deployments
+#
+# Project: "Advanced Topics in Networks" - Tel Aviv University
+#
+# This script supports two modes:
+# 1. Direct Mode (default):
+#    Creates a VM with a public IP.
+#    Firewall is open to the world (0.0.0.0/0) on the target port.
+#    [ Internet ] -> [ Firewall: 0.0.0.0/0 ] -> [ VM: Public IP ]
+#
+# 2. Protected Mode (--with-protection):
+#    Creates an External Load Balancer (with Cloud Armor Standard DDoS protection).
+#    Creates a VM with NO public IP.
+#    Firewall is LOCKED DOWN, only allowing traffic from the Google LB and IAP.
+#    [ Internet ] -> [ LB (Cloud Armor) ] -> [ Firewall: Google IPs ] -> [ VM: Private IP ]
+#
 
 set -e
 
@@ -16,19 +31,43 @@ print_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-# Default Configuration (can be overridden by gcp.env)
+# --- Default Configuration ---
 VM_NAME="http2-flood-lab"
 ZONE="us-central1-a"
 REGION="us-central1"
-MACHINE_TYPE="f1-micro"  # GCP Free Tier eligible
-FIREWALL_RULE_NAME="allow-http2-lab"
+MACHINE_TYPE="f1-micro" # GCP Free Tier eligible
+
+# Resource Names for Direct Mode
+FIREWALL_RULE_DIRECT_VM="allow-http2-lab-direct"
+VM_TAG_DIRECT="http-server-direct" # Tag for direct VM
+
+# Resource Names for Protected Mode
+VM_TAG_PROTECTED="http-server-protected" # Tag for protected VM
+FIREWALL_RULE_LB="allow-lb-to-vm"
+FIREWALL_RULE_SSH_IAP="allow-ssh-via-iap"
+IG_NAME="${VM_NAME}-ig" # Instance Group
+HC_NAME="${VM_NAME}-hc" # Health Check
+BES_NAME="${VM_NAME}-bes" # Backend Service
+UM_NAME="${VM_NAME}-url-map" # URL Map
+TP_NAME="${VM_NAME}-target-proxy" # Target Proxy
+LB_IP_NAME="${VM_NAME}-lb-ip" # Static IP for LB
+FW_RULE_NAME="${VM_NAME}-fw-rule" # Forwarding Rule
+
+# --- Function Definitions ---
 
 # Function to create/update gcp.env configuration file
 create_gcp_config() {
     local project_id=$1
-    local external_ip=$2
+    local target_ip=$2
+    local target_port=$3
+    local protected_mode=$4
     local config_file="gcp.env"
     
+    local mode_desc="Direct (VM w/ Public IP)"
+    if [ "$protected_mode" = true ]; then
+        mode_desc="Protected (Cloud Armor LB)"
+    fi
+
     print_info "Creating GCP configuration file: $config_file"
     cat > "$config_file" << EOF
 # HTTP/2 Flood Lab - GCP Configuration
@@ -45,10 +84,12 @@ GCP_VM_NAME=$VM_NAME
 GCP_MACHINE_TYPE=$MACHINE_TYPE
 
 # Network Configuration (auto-populated)
-TARGET_IP=$external_ip
-
-# Firewall Configuration
-FIREWALL_RULE_NAME=$FIREWALL_RULE_NAME
+# Target IP for the attack script
+TARGET_IP=$target_ip
+# Target Port for the attack script
+TARGET_PORT=$target_port
+# Deployment mode
+DEPLOYMENT_MODE=$mode_desc
 
 # Metadata
 CREATED_DATE=$(date -Iseconds)
@@ -61,31 +102,36 @@ EOF
 usage() {
     echo "HTTP/2 Flood Lab - Infrastructure Setup"
     echo ""
-    echo "Usage: $0 PROJECT_ID [options]"
+    echo "Usage: $0 [PROJECT_ID] [options]"
     echo ""
-    echo "This script creates the complete GCP infrastructure for HTTP/2 flood testing."
-    echo "After setup, use deploy-server.sh and deploy-attack.sh for testing."
+    echo "This script creates the GCP infrastructure for HTTP/2 flood testing."
     echo ""
     echo "Arguments:"
-    echo "  PROJECT_ID  Your GCP project ID (required)"
+    echo "  PROJECT_ID        Your GCP project ID (Optional, will auto-detect)"
     echo ""
     echo "Options:"
-    echo "  --force     Delete existing VM and create new one"
-    echo "  --help      Show this help message"
+    echo "  --with-protection   Enable mitigation: Deploy VM behind a Google Load Balancer"
+    echo "                      (Cloud Armor Standard) instead of a direct public IP."
+    echo "  --force             Delete existing VM and create new one"
+    echo "  --help              Show this help message"
     echo ""
     echo "Prerequisites:"
-    echo "  1. Create GCP project at console.cloud.google.com"
-    echo "  2. Install gcloud CLI and run 'gcloud auth login'"
-    echo "  3. Uses GCP Free Tier (no billing required)"
+    echo "  1. gcloud CLI installed and authenticated ('gcloud auth login')"
+    echo "  2. Required APIs will be enabled: compute.googleapis.com, iap.googleapis.com"
     echo ""
     exit 1
 }
 
-# Parse arguments
+# --- Argument Parsing ---
 PROJECT_ID=""
 FORCE=false
+PROTECTED_MODE=false
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --with-protection)
+            PROTECTED_MODE=true
+            shift
+            ;;
         --force)
             FORCE=true
             shift
@@ -109,6 +155,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# --- Main Script ---
+
 # Auto-detect project if not provided
 if [ -z "$PROJECT_ID" ]; then
     DETECTED_PROJECT=$(gcloud config get-value project 2>/dev/null || echo "")
@@ -124,15 +172,17 @@ fi
 
 # Check if gcloud is available
 if ! command -v gcloud &> /dev/null; then
-    print_error "gcloud CLI not found. Please install Google Cloud SDK:"
-    print_info "  curl https://sdk.cloud.google.com | bash"
-    print_info "  exec -l \$SHELL"
-    print_info "  gcloud auth login"
+    print_error "gcloud CLI not found. Please install Google Cloud SDK."
     exit 1
 fi
 
 print_info "Setting up HTTP/2 Flood Lab Infrastructure on GCP"
 print_info "Project ID: $PROJECT_ID"
+if [ "$PROTECTED_MODE" = true ]; then
+    print_warning "Mode: PROTECTED (with Load Balancer + Cloud Armor)"
+else
+    print_info "Mode: DIRECT (VM with Public IP)"
+fi
 
 # Set project and region
 print_info "Configuring gcloud..."
@@ -143,11 +193,18 @@ gcloud config set compute/zone $ZONE
 # Enable required APIs
 print_info "Enabling Compute Engine API..."
 gcloud services enable compute.googleapis.com
+if [ "$PROTECTED_MODE" = true ]; then
+    print_info "Enabling Identity-Aware Proxy (IAP) API (for secure SSH)..."
+    gcloud services enable iap.googleapis.com
+fi
 
 # Check if VM already exists
 if gcloud compute instances describe $VM_NAME --zone=$ZONE &>/dev/null; then
     if [ "$FORCE" = true ]; then
         print_warning "Deleting existing VM..."
+        # This is a simple delete. In a real-world protected setup,
+        # we would also need to delete the LB, IG, etc.
+        # For this lab, deleting the VM is sufficient for a --force.
         gcloud compute instances delete $VM_NAME --zone=$ZONE --quiet
     else
         print_error "VM '$VM_NAME' already exists!"
@@ -156,7 +213,7 @@ if gcloud compute instances describe $VM_NAME --zone=$ZONE &>/dev/null; then
     fi
 fi
 
-# Create startup script
+# Create startup script (same for both modes)
 print_info "Creating VM startup script..."
 cat > /tmp/startup-script.sh << 'EOF'
 #!/bin/bash
@@ -168,7 +225,6 @@ apt-get update
 # Install Docker
 curl -fsSL https://get.docker.com -o get-docker.sh
 sh get-docker.sh
-usermod -aG docker $USER
 
 # Install Docker Compose
 curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
@@ -185,29 +241,159 @@ touch /tmp/setup-complete
 echo "VM setup completed successfully" >> /var/log/startup-script.log
 EOF
 
-print_info "Creating VM instance..."
-# Create VM with startup script
-gcloud compute instances create $VM_NAME \
-    --zone=$ZONE \
-    --machine-type=$MACHINE_TYPE \
-    --image-family=ubuntu-2204-lts \
-    --image-project=ubuntu-os-cloud \
-    --image-family-scope=global \
-    --boot-disk-size=10GB \
-    --boot-disk-type=pd-standard \
-    --metadata-from-file startup-script=/tmp/startup-script.sh \
-    --tags=http-server,https-server \
-    --scopes=https://www.googleapis.com/auth/cloud-platform
 
-# Create firewall rule if it doesn't exist
-if ! gcloud compute firewall-rules describe $FIREWALL_RULE_NAME &>/dev/null; then
-    print_info "Creating firewall rule..."
-    gcloud compute firewall-rules create $FIREWALL_RULE_NAME \
-        --allow tcp:8080 \
-        --source-ranges 0.0.0.0/0 \
-        --target-tags=http-server \
-        --description "Allow HTTP/2 Flood Lab traffic on port 8080"
+# =================================================================
+#  BEGIN CONDITIONAL INFRASTRUCTURE SETUP
+# =================================================================
+
+# These variables will be populated by the mode-specific logic
+EXTERNAL_IP=""
+TARGET_PORT=""
+
+if [ "$PROTECTED_MODE" = true ]; then
+    # --- PROTECTED MODE LOGIC ---
+    print_info "Starting setup in PROTECTED mode..."
+
+    # 1. Create VM with NO public IP and the PROTECTED tag
+    print_info "Creating VM instance (without public IP)..."
+    gcloud compute instances create $VM_NAME \
+        --zone=$ZONE \
+        --machine-type=$MACHINE_TYPE \
+        --image-family=ubuntu-2204-lts \
+        --image-project=ubuntu-os-cloud \
+        --boot-disk-size=10GB \
+        --boot-disk-type=pd-standard \
+        --metadata-from-file startup-script=/tmp/startup-script.sh \
+        --tags=$VM_TAG_PROTECTED \
+        --scopes=https://www.googleapis.com/auth/cloud-platform \
+        --no-address # <-- THIS IS THE KEY
+    
+    # 2. Create Instance Group and add VM
+    print_info "Creating Unmanaged Instance Group..."
+    gcloud compute instance-groups unmanaged create $IG_NAME --zone=$ZONE
+    gcloud compute instance-groups unmanaged add-instances $IG_NAME --zone=$ZONE --instances=$VM_NAME
+    
+    # 3. Create SECURE firewall rule (Allow LB)
+    print_info "Creating firewall rule to allow Load Balancer..."
+    if ! gcloud compute firewall-rules describe $FIREWALL_RULE_LB &>/dev/null; then
+        gcloud compute firewall-rules create $FIREWALL_RULE_LB \
+            --allow tcp:8080 \
+            --source-ranges 35.191.0.0/16,130.211.0.0/22 \
+            --target-tags=$VM_TAG_PROTECTED \
+            --description "Allow Google LB health checks and traffic"
+    else
+        print_warning "Firewall rule '$FIREWALL_RULE_LB' already exists."
+    fi
+
+    # 4. Create SECURE firewall rule (Allow IAP for SSH)
+    print_info "Creating firewall rule to allow IAP for SSH..."
+    if ! gcloud compute firewall-rules describe $FIREWALL_RULE_SSH_IAP &>/dev/null; then
+        gcloud compute firewall-rules create $FIREWALL_RULE_SSH_IAP \
+            --allow tcp:22 \
+            --source-ranges 35.235.240.0/20 \
+            --target-tags=$VM_TAG_PROTECTED \
+            --description "Allow SSH via Google's Identity-Aware Proxy"
+    else
+        print_warning "Firewall rule '$FIREWALL_RULE_SSH_IAP' already exists."
+    fi
+
+    # 5. Create Load Balancer components
+    # We must check for existence for all, as --force only deletes the VM
+    
+    print_info "Creating Global Static IP for Load Balancer..."
+    if ! gcloud compute addresses describe $LB_IP_NAME --global &>/dev/null; then
+        gcloud compute addresses create $LB_IP_NAME --global
+    fi
+    EXTERNAL_IP=$(gcloud compute addresses describe $LB_IP_NAME --global --format='get(address)')
+    
+    print_info "Creating Health Check for port 8080/health..."
+    if ! gcloud compute health-checks describe $HC_NAME &>/dev/null; then
+        gcloud compute health-checks create http $HC_NAME --port 8080 --request-path /health
+    fi
+    
+    print_info "Creating Backend Service..."
+    if ! gcloud compute backend-services describe $BES_NAME --global &>/dev/null; then
+        gcloud compute backend-services create $BES_NAME \
+            --health-checks $HC_NAME \
+            --protocol HTTP \
+            --global
+    fi
+    
+    print_info "Attaching Instance Group to Backend Service..."
+    # Check if backend already exists to avoid error
+    if ! gcloud compute backend-services list-backends $BES_NAME --global | grep -q $IG_NAME; then
+        gcloud compute backend-services add-backend $BES_NAME \
+            --instance-group $IG_NAME \
+            --instance-group-zone $ZONE \
+            --global
+    fi
+    
+    print_info "Creating URL Map..."
+    if ! gcloud compute url-maps describe $UM_NAME &>/dev/null; then
+        gcloud compute url-maps create $UM_NAME --default-service $BES_NAME
+    fi
+    
+    print_info "Creating Target HTTP Proxy..."
+    if ! gcloud compute target-http-proxies describe $TP_NAME &>/dev/null; then
+        gcloud compute target-http-proxies create $TP_NAME --url-map $UM_NAME
+    fi
+    
+    print_info "Creating Global Forwarding Rule (LB Frontend)..."
+    if ! gcloud compute forwarding-rules describe $FW_RULE_NAME --global &>/dev/null; then
+        gcloud compute forwarding-rules create $FW_RULE_NAME \
+            --address $EXTERNAL_IP \
+            --target-http-proxy $TP_NAME \
+            --ports 80 \
+            --global
+    fi
+    
+    TARGET_PORT="80" # Attacker hits the LB on port 80
+    print_success "Load Balancer and Cloud Armor protection are active."
+
+else
+    # --- DIRECT MODE LOGIC (Original) ---
+    print_info "Starting setup in DIRECT mode..."
+
+    # 1. Create VM with a public IP and the DIRECT tag
+    print_info "Creating VM instance (with public IP)..."
+    gcloud compute instances create $VM_NAME \
+        --zone=$ZONE \
+        --machine-type=$MACHINE_TYPE \
+        --image-family=ubuntu-2204-lts \
+        --image-project=ubuntu-os-cloud \
+        --boot-disk-size=10GB \
+        --boot-disk-type=pd-standard \
+        --metadata-from-file startup-script=/tmp/startup-script.sh \
+        --tags=$VM_TAG_DIRECT \
+        --scopes=https://www.googleapis.com/auth/cloud-platform
+    
+    # 2. Create INSECURE firewall rule (Allow 0.0.0.0/0)
+    print_info "Creating firewall rule (0.0.0.0/0)..."
+    if ! gcloud compute firewall-rules describe $FIREWALL_RULE_DIRECT_VM &>/dev/null; then
+        gcloud compute firewall-rules create $FIREWALL_RULE_DIRECT_VM \
+            --allow tcp:8080 \
+            --source-ranges 0.0.0.0/0 \
+            --target-tags=$VM_TAG_DIRECT \
+            --description "Allow HTTP/2 Flood Lab traffic on port 8080"
+    else
+        print_warning "Firewall rule '$FIREWALL_RULE_DIRECT_VM' already exists."
+    fi
+
+    # 3. Get VM external IP
+    EXTERNAL_IP=$(gcloud compute instances describe $VM_NAME \
+        --zone=$ZONE \
+        --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+    
+    TARGET_PORT="8080" # Attacker hits the VM directly on 8080
+
 fi
+
+# =================================================================
+#  END CONDITIONAL INFRASTRUCTURE SETUP
+# =================================================================
+
+
+# --- Post-Setup Verification ---
 
 # Wait for VM to be ready
 print_info "Waiting for VM to be ready (this may take 2-3 minutes)..."
@@ -215,8 +401,13 @@ sleep 30
 
 # Wait for startup script to complete
 print_info "Waiting for dependency installation to complete..."
+SSH_COMMAND="gcloud compute ssh $VM_NAME --zone=$ZONE --command='test -f /tmp/setup-complete'"
+if [ "$PROTECTED_MODE" = true ]; then
+    SSH_COMMAND="gcloud compute ssh $VM_NAME --zone=$ZONE --command='test -f /tmp/setup-complete' --tunnel-through-iap"
+fi
+
 for i in {1..24}; do
-    if gcloud compute ssh $VM_NAME --zone=$ZONE --command="test -f /tmp/setup-complete" &>/dev/null; then
+    if $SSH_COMMAND &>/dev/null; then
         print_success "VM setup completed!"
         break
     fi
@@ -225,32 +416,45 @@ for i in {1..24}; do
 done
 
 # Verify Docker is working
-if ! gcloud compute ssh $VM_NAME --zone=$ZONE --command="docker --version && docker-compose --version" &>/dev/null; then
-    print_error "Docker installation failed. Check VM logs:"
-    print_info "  gcloud compute ssh $VM_NAME --zone=$ZONE"
-    print_info "  sudo journalctl -u google-startup-scripts.service"
-    exit 1
+DOCKER_SSH_COMMAND="gcloud compute ssh $VM_NAME --zone=$ZONE --command='docker --version && docker-compose --version'"
+if [ "$PROTECTED_MODE" = true ]; then
+    DOCKER_SSH_COMMAND="gcloud compute ssh $VM_NAME --zone=$ZONE --command='docker --version && docker-compose --version' --tunnel-through-iap"
 fi
 
-# Get VM external IP
-EXTERNAL_IP=$(gcloud compute instances describe $VM_NAME \
-    --zone=$ZONE \
-    --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+if ! $DOCKER_SSH_COMMAND &>/dev/null; then
+    print_error "Docker installation failed. Check VM logs:"
+    print_info "  In DIRECT mode: gcloud compute ssh $VM_NAME --zone=$ZONE"
+    print_info "  In PROTECTED mode: gcloud compute ssh $VM_NAME --zone=$ZONE --tunnel-through-iap"
+    print_info "  Then run: sudo journalctl -u google-startup-scripts.service"
+    exit 1
+fi
 
 # Clean up temporary file
 rm -f /tmp/startup-script.sh
 
 # Create GCP configuration file
-create_gcp_config "$PROJECT_ID" "$EXTERNAL_IP"
+create_gcp_config "$PROJECT_ID" "$EXTERNAL_IP" "$TARGET_PORT" "$PROTECTED_MODE"
 
 print_success "GCP Infrastructure setup completed successfully!"
 echo ""
 print_info "VM Details:"
 echo "  Name: $VM_NAME"
 echo "  Zone: $ZONE"
-echo "  External IP: $EXTERNAL_IP"
 echo "  Machine Type: $MACHINE_TYPE (GCP Free Tier)"
 echo "  Project: $PROJECT_ID"
+echo ""
+
+if [ "$PROTECTED_MODE" = true ]; then
+    print_info "Protection Details (Cloud Armor Enabled):"
+    echo -e "  ${GREEN}Target IP (LB): $EXTERNAL_IP${NC}"
+    echo -e "  ${GREEN}Target Port (LB): $TARGET_PORT${NC}"
+    echo "  VM Private IP: $(gcloud compute instances describe $VM_NAME --zone=$ZONE --format='get(networkInterfaces[0].networkIP)')"
+else
+    print_info "Direct Access Details (Unprotected):"
+    echo -e "  ${RED}Target IP (VM): $EXTERNAL_IP${NC}"
+    echo -e "  ${RED}Target Port (VM): $TARGET_PORT${NC}"
+fi
+
 echo ""
 print_success "Configuration saved to: gcp.env"
 print_info "All deployment scripts will use this configuration file as single source of truth."
@@ -258,14 +462,19 @@ echo ""
 print_success "Ready for HTTP/2 Flood Lab testing!"
 echo ""
 print_info "Next Steps:"
-echo "  1. Deploy server:  ./deploy-server.sh --gcp part-A"
-echo "  2. Attack server:  ./deploy-attack.sh --gcp part-A"
-echo "  3. Monitor lab:    curl --http2-prior-knowledge http://$EXTERNAL_IP:8080/health"
+echo "  1. Deploy server:   ./deploy-server.sh --gcp part-A"
+echo "  2. Attack server:   ./deploy-attack.sh --gcp part-A"
+echo "  3. Monitor lab:     curl http://$EXTERNAL_IP:$TARGET_PORT/health"
 echo ""
 print_info "VM Management:"
-echo "  Connect to VM:     gcloud compute ssh $VM_NAME --zone=$ZONE"
-echo "  Stop VM:           ./deploy-server.sh --gcp --stop"
-echo "  Start VM:          gcloud compute instances start $VM_NAME --zone=$ZONE"
+if [ "$PROTECTED_MODE" = true ]; then
+    print_warning "VM has no public IP. Use IAP to connect:"
+    echo "  Connect to VM:    gcloud compute ssh $VM_NAME --zone=$ZONE --tunnel-through-iap"
+else
+    echo "  Connect to VM:    gcloud compute ssh $VM_NAME --zone=$ZONE"
+fi
+echo "  Stop VM:          ./deploy-server.sh --gcp --stop"
+echo "  Start VM:         gcloud compute instances start $VM_NAME --zone=$ZONE"
 echo ""
 print_warning "VM will auto-shutdown after 2 hours to prevent unexpected charges."
 print_info "Use the start command above to restart if needed."
