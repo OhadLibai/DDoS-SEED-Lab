@@ -178,7 +178,6 @@ deploy_gcp_server() {
     # Copy docker-compose file to instance and deploy
     echo -e "${GREEN}Deploying $attack_type server on GCP...${NC}"
     
-    # Copy attack-specific docker-compose file to GCP instance
     # Create directory and set permissions on GCP VM
     gcloud compute ssh ubuntu@$INFRASTRUCTURE_NAME --zone=$INSTANCE_ZONE --quiet --command="
         sudo mkdir -p /opt/http2-labs
@@ -189,17 +188,16 @@ deploy_gcp_server() {
     # Now copy the file
     gcloud compute scp attacks/$attack_type/docker-compose.yml ubuntu@$INFRASTRUCTURE_NAME:/opt/http2-labs/docker-compose-$attack_type.yml --zone=$INSTANCE_ZONE --quiet
 
-    # Run commands in the directory
+    # Run commands *INSIDE* the VM
     gcloud compute ssh ubuntu@$INFRASTRUCTURE_NAME --zone=$INSTANCE_ZONE --quiet --command="
         cd /opt/http2-labs
-    "
         
-        # Stop any existing containers
-        docker-compose down 2>/dev/null || true
+        # Stop any existing containers using the *correct* file
+        docker-compose -f docker-compose-$attack_type.yml down 2>/dev/null || true
         docker system prune -f
         
         # Start the server using copied docker-compose file
-        docker-compose -f attacks/$attack_type/docker-compose.yml up -d --build
+        docker-compose -f docker-compose-$attack_type.yml up -d --build
         
         # Wait for Apache to be ready
         echo 'Waiting for Apache to start...'
@@ -210,6 +208,7 @@ deploy_gcp_server() {
             fi
             sleep 2
         done
+    "
     
     echo ""
     echo -e "${GREEN}🎉 GCP server deployed successfully!${NC}"
