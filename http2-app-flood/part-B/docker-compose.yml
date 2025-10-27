@@ -1,0 +1,15 @@
+# Part B: Multi-Worker HTTP/2 Server (Server-Only)
+name: http2-server-part-b
+
+services:
+  victim:
+    build:
+      context: ../victims
+      dockerfile: Dockerfile
+    container_name: prod-victim-server
+    ports:
+      - "8080:80"
+    environment:
+      - WORKLOAD=${WORKLOAD:-5}
+      - SCENARIO=${SCENARIO:-default_scenario}
+      - SERVER_TYPE=multi-worker

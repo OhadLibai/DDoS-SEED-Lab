@@ -1,152 +1,224 @@
-# DDoS Attack Labs - SEED Educational Project
+# DDoS SEED Lab - HTTP/2 Protocol Vulnerability Studies
+*Libai Ohad*  
+*Ben Zion Roei*
 
-## Overview
+---
+A comprehensive educational laboratory suite for exploring Distributed Denial of Service (DDoS) attacks targeting HTTP/2 protocol vulnerabilities. This lab collection provides hands-on experience with modern web protocol exploitation techniques through controlled local environments and real-world cloud deployments.
 
-This repository contains two comprehensive laboratory exercises designed to explore and understand Distributed Denial of Service (DDoS) attacks in controlled educational environments. The labs provide hands-on experience with different DDoS attack vectors and their impact on web services, while emphasizing defensive cybersecurity practices.
+## 🎯 Learning Objectives
 
-## Educational Context
+- **Protocol Vulnerability Analysis**: Understand HTTP/2 and HTTP/1.1 attack mechanisms
+- **Performance Impact Assessment**: Quantify attack effectiveness and system degradation
+- **Cloud vs Local Comparison**: Evaluate attack performance across different deployment scenarios
+- **Real-world Attack Simulation**: Experience internet-scale attacks using cloud infrastructure
 
-These labs are part of the broader **SEED (SEcurity EDucation)** project, which provides practical cybersecurity exercises for educational institutions worldwide. The SEED project focuses on learning-by-doing methodology, allowing students to gain practical experience with security concepts through controlled laboratory environments.
+## 🏗️ Lab Architecture
 
-## Lab Components
+### Clean Separation Design
+All labs implement **clean separation** between server deployment and attack deployment:
+- **Deploy servers independently** (local or cloud)
+- **Launch attacks against running servers** 
+- **Real internet simulation**: Attack from local machine → cloud servers
+- **Independent operation**: Servers run without attacks, attacks target existing servers
 
-### 🌊 [HTTP Flood Attack Lab](./http_flood_lab/)
-Explores volumetric DDoS attacks that overwhelm server resources through high-volume HTTP requests.
+### Network Topologies
 
-**Key Learning Areas:**
-- Understanding volumetric attack patterns
-- Server resource exhaustion mechanisms  
-- Single-threaded vs multi-threaded server resilience
-- Performance impact measurement
-
-### 🐌 [Slowloris Attack Lab](./slowloris_lab/)
-Investigates connection exhaustion attacks that consume server resources with minimal bandwidth usage.
-
-**Key Learning Areas:**
-- Low-bandwidth, high-impact attack techniques
-- Connection pool exhaustion strategies
-- Stealth attack characteristics
-- Adaptive attack methodologies
-
-## Repository Structure
-
+#### Local Testing Environment
 ```
-DDoS-SEED-lab/
-├── README.md                           # This file
-├── HTTP_FLOOD_MONITORING_GUIDE.md      # Comprehensive HTTP flood monitoring
-├── SLOWLORIS_MONITORING_GUIDE.md       # Detailed Slowloris monitoring  
-├── MONITORING_QUICK_REFERENCE.md       # Quick reference commands
-├── http_flood_lab/                     # HTTP Flood Attack Lab
-│   ├── README.md                       # Lab-specific instructions
-│   ├── part_A/                         # Single-threaded Flask server
-│   ├── part_B/                         # Multi-threaded Gunicorn server
-│   ├── victim_app.py                   # Web application target
-│   ├── http_flood.py                   # Attack script
-│   └── Dockerfile.flood_attcker        # Attacker container
-└── slowloris_lab/                      # Slowloris Attack Lab
-    ├── README.md                       # Lab-specific instructions
-    ├── part_A/                         # Basic Slowloris attack
-    ├── part_B/                         # Advanced adaptive attack
-    └── ...                             # Attack scripts and configurations
+┌─────────────────┐    ┌─────────────────┐
+│ Attack Container│◄──►│Server Container │
+│                 │    │                 │
+└─────────────────┘    └─────────────────┘
+     Bridge Network        HTTP/2 Server
 ```
 
-## Key Objectives
+#### Cloud Testing Environment
+```
+┌─────────────────┐    Internet    ┌─────────────────┐
+│ Local Attack    │◄──────────────►│ GCP VM          │
+│ Container       │                │ ┌─────────────┐ │
+└─────────────────┘                │ │HTTP/2       │ │
+                                   │ │Container    │ │
+                                   │ └─────────────┘ │
+                                   └─────────────────┘
+```
 
-### Primary Learning Goals
-1. **Attack Vector Understanding** - Comprehend different DDoS attack mechanisms and their characteristics
-2. **Infrastructure Impact Analysis** - Observe how different server architectures respond to various attack types
-3. **Performance Measurement** - Learn to quantify attack effectiveness and system degradation
-4. **Cloud vs Local Comparison** - Evaluate performance differences between local Docker and cloud environments
+## 📚 Lab Components
 
-### Technical Skills Development
-- Docker containerization and orchestration
-- Network monitoring and analysis
-- Performance benchmarking techniques
-- Cloud platform deployment (Google Cloud Platform)
-- System resource monitoring
+### 1. HTTP/2 Application Flood Attack Lab (`http2-app-flood/`)
+**Focus**: HTTP/2 multiplexing exploitation and application-layer flooding
 
-## Prerequisites
+- **Part A**: Single-worker development environment testing  
+- **Part B**: Multi-worker production-like environment testing
+- **Attack Types**: Basic flood, advanced evasion techniques
+- **Scenarios**: 6 CPU-intensive workload types (CAPTCHA, crypto, gaming, etc.)
+- **Key Learning**: HTTP/2 stream multiplexing vulnerabilities, server resource exhaustion
 
-### Technical Requirements
+### 2. HTTP/2 Flow Control Attack Lab (`flow-control/`)
+**Focus**: HTTP/2 flow control mechanism exploitation
+
+- **Zero-Window Attack**: Forces indefinite worker thread blocking
+- **Slow-Incremental Attack**: Sustained resource exhaustion via minimal window updates
+- **Adaptive-Slow Attack**: Intelligent attack adaptation with evasion techniques  
+- **Key Learning**: Protocol-level flow control abuse, connection state manipulation
+
+### 3. Slowloris Attack Lab (`bonus-slowloris/`)
+**Focus**: HTTP/1.1 legacy protocol vulnerabilities in HTTP/2 environments
+
+- **Basic Slowloris**: Traditional incomplete header attacks
+- **Advanced Slowloris**: Modern server evasion with multi-threading
+- **Cloud Slowloris**: Steganographic headers with intelligent adaptation
+- **Key Learning**: Backward compatibility attack vectors, protocol fallback exploitation
+
+## 🚀 Quick Start
+
+### Prerequisites
 - **Docker** and **Docker Compose** installed
-- Basic command-line proficiency (Linux/Unix)
-- **Google Cloud Platform** account (for cloud deployment comparison)
-- SSH client for remote access
+- **Google Cloud Platform** account (free tier, no billing required)
+- **gcloud CLI** installed for cloud deployments
+- 4GB+ RAM recommended for local testing
 
-### Knowledge Prerequisites
-- Basic understanding of HTTP protocol
-- Familiarity with client-server architecture
-- Elementary networking concepts (TCP connections, ports)
-- Basic cybersecurity awareness
+### Choose Your Lab Path
 
-### System Requirements
-- **Local Development:**
-  - 4GB+ RAM recommended
-  - Docker with at least 2GB allocated memory
-  - Available ports: 8080
-
-- **Cloud Deployment (GCP):**
-  - VM instance with 2+ vCPUs
-  - 4GB+ memory
-  - Ubuntu 20.04+ or similar Linux distribution
-
-## Quick Start Guide
-
-### 1. Repository Setup
+#### Option 1: Start with HTTP/2 Application Floods
 ```bash
-git clone <repository-url>
-cd DDoS-SEED-lab
+cd http2-app-flood
+./deploy-server.sh --local part-A
+./deploy-attack.sh --local part-A
 ```
 
-### 2. Choose Your Lab
-- **HTTP Flood Lab**: `cd http_flood_lab/` 
-- **Slowloris Lab**: `cd slowloris_lab/`
-
-### 3. Select Lab Variant
-- **Part A**: Basic implementation (single-threaded/basic attack)
-- **Part B**: Advanced implementation (multi-threaded/adaptive attack)
-
-### 4. Deploy and Monitor
+#### Option 2: Explore Flow Control Attacks
 ```bash
-# Deploy the lab
-cd part_A  # or part_B
-docker-compose up -d
-
-# Start monitoring (refer to monitoring guides)
-watch -n 1 'curl -w "%{time_total}s\n" http://localhost:8080'
+cd flow-control
+./deploy-server.sh local zero-window
+./deploy-attack.sh zero-window local --connections 512
 ```
 
-## Performance Analysis Framework
+#### Option 3: Study Legacy Protocol Vulnerabilities
+```bash
+cd bonus-slowloris
+./deploy-server.sh latest local
+./deploy-attack.sh advanced local --logs
+```
 
-This project emphasizes **comparative performance analysis** between different deployment environments:
+### Real Internet Testing (GCP Free Tier)
 
-### Local vs Cloud Comparison
-- **Local Environment**: Docker containers on local machine
-- **Cloud Environment**: Deployment on Google Cloud Platform
-- **Comparison Metrics**: CPU usage, response latency, traffic throughput, scalability limits
+Each lab supports cloud deployment for realistic internet-scale testing:
 
-### Monitoring Resources
-Comprehensive monitoring guides are provided to facilitate detailed performance analysis:
+```bash
+# One-time GCP setup (run from any lab directory)
+./setup-gcp-infrastructure.sh YOUR_PROJECT_ID
 
-- **[HTTP Flood Monitoring Guide](./HTTP_FLOOD_MONITORING_GUIDE.md)** - Complete monitoring setup for volumetric attacks
-- **[Slowloris Monitoring Guide](./SLOWLORIS_MONITORING_GUIDE.md)** - Detailed connection exhaustion monitoring
-- **[Quick Reference Guide](./MONITORING_QUICK_REFERENCE.md)** - Essential commands and metrics summary
+# Deploy server to cloud
+./deploy-server.sh --gcp <lab-specific-options>
 
-## Educational Integration
+# Attack cloud server from local machine
+./deploy-attack.sh --gcp <lab-specific-options>
+```
 
-### Pedagogical Approach
-- **Experiential Learning** - Direct hands-on experience with attack techniques
-- **Controlled Environment** - Safe, isolated laboratory settings
-- **Comparative Analysis** - Understanding trade-offs and performance characteristics
-- **Defensive Perspective** - Emphasis on understanding attacks to build better defenses
+## 🔧 Common Deployment Patterns
 
-## Support and Resources
+### Server Deployment
+```bash
+# Local development
+./deploy-server.sh --local <options>
 
-### Documentation
-- Individual lab README files provide detailed setup instructions
-- Monitoring guides offer comprehensive performance analysis procedures
-- Quick reference guides enable rapid troubleshooting
+# Cloud production testing  
+./deploy-server.sh --gcp <options>
 
-### SEED Project Resources
-- [SEED Project Website](https://seedsecuritylabs.org/) - Additional security labs and resources
-- [SEED Lab Manual](https://github.com/seed-labs/seed-labs) - Comprehensive lab collection
+# Stop servers
+./deploy-server.sh --stop
+
+# Destroy cloud infrastructure
+./deploy-server.sh --destruct-vm
+```
+
+### Attack Deployment
+```bash
+# Local attacks (to local servers)
+./deploy-attack.sh --local <attack-type> <options>
+
+# Cloud attacks (from local to cloud servers)
+./deploy-attack.sh --gcp <attack-type> <options>
+
+# Stop all attacks
+./deploy-attack.sh --stop
+```
+
+## 📊 Monitoring and Analysis
+
+### Essential Monitoring Commands
+
+**Response Time Testing**:
+```bash
+# Local server
+watch -n 1 'curl -w "Response: %{time_total}s\n" -o /dev/null -s http://localhost:8080'
+
+# Cloud server  
+curl -w "Response: %{time_total}s\n" -o /dev/null -s http://EXTERNAL_IP:8080
+```
+
+**Resource Usage**:
+```bash
+# Local containers
+docker stats --no-stream
+
+# Cloud resources
+gcloud compute ssh <instance-name> --command="docker stats --no-stream"
+```
+
+**Connection Analysis**:
+```bash
+# Active connections
+ss -tan | grep :8080 | wc -l
+
+# Container-level connections
+docker exec <container> sh -c "awk 'NR>1 && \$4==\"01\" {count++} END {print count+0}' /proc/net/tcp"
+```
+
+## 🧹 Cleanup and Cost Management
+
+### Complete Lab Cleanup
+```bash
+# Stop all local resources
+docker stop $(docker ps -q)
+docker system prune -f
+
+# Destroy all GCP resources
+./deploy-server.sh --gcp --destruct-vm  # Run from any lab directory
+```
+
+### Cost Management
+- GCP VMs auto-shutdown after 2 hours to prevent unexpected charges
+- Use `--destruct-vm` flag to completely remove cloud infrastructure
+- Monitor GCP billing dashboard for usage
+
+## 📋 Lab Directory Structure
+
+```
+DDoS-SEED-Lab/
+├── README.md                    # This overview document
+├── http2-app-flood/            # HTTP/2 application flood attacks
+│   ├── README.md               
+│   ├── part-A/                 # Single-worker environment
+│   ├── part-B/                 # Multi-worker environment
+│   ├── deploy-server.sh
+│   └── deploy-attack.sh
+├── flow-control/               # HTTP/2 flow control attacks  
+│   ├── README.md
+│   ├── attacks/                # Attack implementations
+│   ├── deploy-server.sh
+│   └── deploy-attack.sh
+└── bonus-slowloris/           # HTTP/1.1 slowloris attacks
+    ├── README.md
+    ├── attacks/               # Slowloris variants
+    ├── deploy-server.sh
+    └── deploy-attack.sh
+```
+
+## 📚 Further Reading
+
+- [RFC 7540: HTTP/2 Specification](https://tools.ietf.org/html/rfc7540)
+- [HTTP/2 Flow Control Mechanisms](https://tools.ietf.org/html/rfc7540#section-6.9)
+- [Apache HTTP/2 Module Documentation](https://httpd.apache.org/docs/2.4/mod/mod_http2.html)
+- [GCP Free Tier Documentation](https://cloud.google.com/free/docs/gcp-free-tier)

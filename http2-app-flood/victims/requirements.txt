@@ -1,0 +1,9 @@
+# HTTP/2 Flood Lab - Victim Server Requirements
+
+# HTTP/2 web server framework
+quart==0.19.9
+hypercorn==0.17.3
+
+# Scenario dependencies
+Pillow==10.1.0          # For captcha and webservice scenarios (image processing)
+cryptography==41.0.7    # For crypto scenario (cryptographic operations)

@@ -1,8 +1,0 @@
-# http_flood_lab/Dockerfile.part_A
-FROM python:3.9-slim
-WORKDIR /app
-COPY victim_app.py .
-RUN pip install Flask
-
-# Use CMD to run the single-threaded development server
-CMD ["python", "-u", "victim_app.py"]

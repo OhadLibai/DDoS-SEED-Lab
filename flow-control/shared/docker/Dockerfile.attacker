@@ -1,0 +1,24 @@
+FROM python:3.11-slim
+
+# Install required packages
+RUN apt-get update && apt-get install -y \
+    curl \
+    netcat-openbsd \
+    tcpdump \
+    net-tools \
+    dnsutils \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python HTTP/2 dependencies
+RUN pip install --no-cache-dir \
+    h2 \
+    requests \
+    colorama \
+    pyfiglet
+
+# Set working directory
+WORKDIR /workspace
+
+# Default command
+CMD ["/bin/bash"]

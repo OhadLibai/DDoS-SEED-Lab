@@ -1,0 +1,13 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Copy all attack scripts
+COPY slowloris.py .
+COPY advanced_slowloris.py .
+COPY cloud_advanced_slowloris.py .
+
+# All dependencies are standard library - no additional packages needed
+
+# Default command - will be overridden by deployment script
+CMD ["python", "slowloris.py"]

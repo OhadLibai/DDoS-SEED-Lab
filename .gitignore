@@ -1,5 +1,54 @@
-http_flood_lab/scenarios
-http_flood_lab/integration_examples.py
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
 
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+attack.log
+results/*.txt
+results/*.csv
+
+# Docker
+.dockerignore
+
+# GCP
+*.json
+.gcloud/
+gcp-key.json
+
+# Temporary files
 *.tmp
-docker-commands
+*.bak
+tmp/
+temp/
+
+# Attack results
+monitoring_data/
+captures/
+*.pcap
+
+# Local configuration
+config.local.yml
+.env
+
+# miscellaneous
+*.tmp
+docker-commands.md
+*TODO.md
+migration.md
+q.md

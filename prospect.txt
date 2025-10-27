@@ -1,0 +1,107 @@
+DDoS SEED Lab - HTTP/2 Protocol Vulnerability Studies
+
+A comprehensive educational laboratory suite for exploring Distributed Denial of Service (DDoS) attacks targeting HTTP/2 protocol vulnerabilities. This lab collection provides hands-on experience with modern web protocol exploitation techniques through controlled local environments and real-world cloud deployments.
+
+Learning Objectives
+
+- Protocol Vulnerability Analysis: Understand HTTP/2 and HTTP/1.1 attack mechanisms
+- Performance Impact Assessment: Quantify attack effectiveness and system degradation
+- Cloud vs Local Comparison: Evaluate attack performance across different deployment scenarios
+- Real-world Attack Simulation: Experience internet-scale attacks using cloud infrastructure
+
+Lab Architecture
+
+Clean Separation Design
+All labs implement clean separation between server deployment and attack deployment:
+- Deploy servers independently (local or cloud)
+- Launch attacks against running servers 
+- Real internet simulation: Attack from local machine → cloud servers
+- Independent operation: Servers run without attacks, attacks target existing servers
+
+Network Topologies
+
+Local Testing Environment
+┌─────────────────┐    ┌─────────────────┐
+│ Attack Container│◄──►│Server Container │
+│                 │    │                 │
+└─────────────────┘    └─────────────────┘
+     Bridge Network        HTTP/2 Server
+
+Cloud Testing Environment
+┌─────────────────┐    Internet    ┌─────────────────┐
+│ Local Attack    │◄──────────────►│ GCP VM          │
+│ Container       │                │ ┌─────────────┐ │
+└─────────────────┘                │ │HTTP/2       │ │
+                                   │ │Container    │ │
+                                   │ └─────────────┘ │
+                                   └─────────────────┘
+
+Lab Components
+
+1. HTTP/2 Application Flood Attack Lab (http2-app-flood/)
+Focus: HTTP/2 multiplexing exploitation and application-layer flooding
+
+- Part A: Single-worker development environment testing  
+- Part B: Multi-worker production-like environment testing
+- Attack Types: Basic flood, advanced evasion techniques
+- Scenarios: 6 CPU-intensive workload types (CAPTCHA, crypto, gaming, etc.)
+- Key Learning: HTTP/2 stream multiplexing vulnerabilities, server resource exhaustion
+
+2. HTTP/2 Flow Control Attack Lab (flow-control/)
+Focus: HTTP/2 flow control mechanism exploitation
+
+- Zero-Window Attack: Forces indefinite worker thread blocking
+- Slow-Incremental Attack: Sustained resource exhaustion via minimal window updates
+- Adaptive-Slow Attack: Intelligent attack adaptation with evasion techniques  
+- Key Learning: Protocol-level flow control abuse, connection state manipulation
+
+3. Slowloris Attack Lab (bonus-slowloris/)
+Focus: HTTP/1.1 legacy protocol vulnerabilities in HTTP/2 environments
+
+- Basic Slowloris: Traditional incomplete header attacks
+- Advanced Slowloris: Modern server evasion with multi-threading
+- Cloud Slowloris: Steganographic headers with intelligent adaptation
+- Key Learning: Backward compatibility attack vectors, protocol fallback exploitation
+
+Real Internet Testing (GCP Free Tier)
+Each lab supports cloud deployment for realistic internet-scale testing:
+
+Monitoring and Analysis:
+	- Response Time Testing
+	- Bandwidth Consumption
+	- Request Rate
+	- Error Rates
+	- CPU and Memory Usage
+	- Thread Pool Depletion
+	- Latency Spikes
+	- Stream Status
+	- TCP Connection Health
+	- Average Connection Duration
+
+
+Cleanup and Cost Management
+Complete Lab Cleanup on Cloud Included
+
+Lab Directory Structure:
+
+DDoS-SEED-Lab/
+├── README.md                    # This overview document
+├── http2-app-flood/            # HTTP/2 application flood attacks
+│   ├── README.md               
+│   ├── part-A/                 # Single-worker environment
+│   ├── part-B/                 # Multi-worker environment
+│   ├── deploy-server.sh
+│   └── deploy-attack.sh
+├── flow-control/               # HTTP/2 flow control attacks  
+│   ├── README.md
+│   ├── attacks/                # Attack implementations
+│   ├── deploy-server.sh
+│   └── deploy-attack.sh
+└── bonus-slowloris/           # HTTP/1.1 slowloris attacks
+    ├── README.md
+    ├── attacks/               # Slowloris variants
+    ├── deploy-server.sh
+    └── deploy-attack.sh
+
+The lab will be constructed in the form and shape of SEED labs.
+A detailed and conclusive analysis file, containing cloud vs. local attack deployments performance delta measurements, will also be handed over.

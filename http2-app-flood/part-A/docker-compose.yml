@@ -1,0 +1,15 @@
+# Part A: Single-Worker HTTP/2 Server (Server-Only)
+name: http2-server-part-a
+
+services:
+  victim:
+    build:
+      context: ../victims
+      dockerfile: Dockerfile
+    container_name: dev-victim-server
+    ports:
+      - "8080:80"
+    environment:
+      - WORKLOAD=${WORKLOAD:-5}
+      - SCENARIO=${SCENARIO:-default_scenario}
+      - SERVER_TYPE=single-worker
