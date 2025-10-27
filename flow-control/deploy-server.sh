@@ -19,7 +19,7 @@ if [ -f "gcp.env" ]; then
     ZONE="$GCP_ZONE"
     PROJECT="$GCP_PROJECT_ID"
 else
-    echo -e "${YELLOW}[WARNING]${NC} gcp.env not found, using hardcoded defaults"
+    echo -e "${BLUE}[INFO]${NC} gcp.env not found, using hardcoded defaults"
     echo -e "${BLUE}[INFO]${NC} Run './setup-gcp.sh' to create proper configuration"
     INFRASTRUCTURE_NAME="http2-lab-infrastructure"
     ZONE="us-central1-a"
@@ -181,8 +181,17 @@ deploy_gcp_server() {
     echo -e "${GREEN}Deploying $attack_type server on GCP...${NC}"
     
     # Copy attack-specific docker-compose file to GCP instance
+    # Create directory and set permissions on GCP VM
+    gcloud compute ssh ubuntu@$INFRASTRUCTURE_NAME --zone=$INSTANCE_ZONE --quiet --command="
+        sudo mkdir -p /opt/http2-labs
+        sudo chown ubuntu:ubuntu /opt/http2-labs
+        sudo chmod 755 /opt/http2-labs
+    "
+
+    # Now copy the file
     gcloud compute scp attacks/$attack_type/docker-compose.yml ubuntu@$INFRASTRUCTURE_NAME:/opt/http2-labs/docker-compose-$attack_type.yml --zone=$INSTANCE_ZONE --quiet
-    
+
+    # Run commands in the directory
     gcloud compute ssh ubuntu@$INFRASTRUCTURE_NAME --zone=$INSTANCE_ZONE --quiet --command="
         cd /opt/http2-labs
         
@@ -224,7 +233,6 @@ stop_gcp_server() {
     echo -e "${GREEN}✅ Instance stopped (disk persists, can restart)${NC}"
     echo "Restart with: $0 gcp [attack-type]"
 }
-
 
 destruct_gcp_infrastructure() {
     echo -e "${RED}⚠️  COMPLETELY REMOVING GCP INFRASTRUCTURE${NC}"
