@@ -1,11 +1,7 @@
 
 # http2_flood.py - Basic HTTP/2 Flood Attack
-#
-# EDUCATIONAL PURPOSES ONLY - FOR DEFENSIVE SECURITY RESEARCH  
 # This is the basic HTTP/2 flood attack implementation for educational labs.
 # Demonstrates fundamental HTTP/2 multiplexing vulnerabilities.
-#
-# Use only against systems you own or have explicit permission to test.
 
 import httpx
 import asyncio
