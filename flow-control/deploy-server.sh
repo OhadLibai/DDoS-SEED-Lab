@@ -1,8 +1,6 @@
 #!/bin/bash
-
 # HTTP/2 Flow Control Lab - Unified Server Deployment
-# Deploys containerized Apache servers for attack testing
-
+# Deploys containerized Apache servers for attack testingde
 set -e
 
 GREEN='\033[0;32m'
@@ -212,7 +210,6 @@ deploy_gcp_server() {
             fi
             sleep 2
         done
-    "
     
     echo ""
     echo -e "${GREEN}🎉 GCP server deployed successfully!${NC}"
