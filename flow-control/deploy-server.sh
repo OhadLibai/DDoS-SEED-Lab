@@ -199,7 +199,7 @@ deploy_gcp_server() {
         docker system prune -f
         
         # Start the server using copied docker-compose file
-        docker-compose -f docker-composes.yml up -d --build
+        docker-compose -f $attack_type/docker-compose.yml up -d --build
         
         # Wait for Apache to be ready
         echo 'Waiting for Apache to start...'
