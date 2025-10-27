@@ -1,13 +1,9 @@
 # cloud_http2_flood.py - Advanced/Evasive HTTP/2 Flood Attack
-# 
-# EDUCATIONAL PURPOSES ONLY - FOR DEFENSIVE SECURITY RESEARCH
 # This script demonstrates advanced attack techniques including:
 # - Multi-process distributed attacks
 # - User-Agent rotation and request diversification  
 # - Enhanced evasion capabilities
 # - Production-grade attack simulation
-#
-# Use only against systems you own or have explicit permission to test.
 
 import httpx
 import asyncio
