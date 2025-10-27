@@ -230,10 +230,11 @@ stop_gcp_server() {
     
     INSTANCE_ZONE=$(gcloud compute instances list --filter="name:$INFRASTRUCTURE_NAME" --format="value(ZONE)" | cut -d'/' -f4)
     
-    gcloud compute instances stop $INFRASTRUCTURE_NAME --zone=$INSTANCE_ZONE --quiet
+    gcloud compute instances stop "$INFRASTRUCTURE_NAME" --zone="$INSTANCE_ZONE" --quiet
     echo -e "${GREEN}✅ Instance stopped (disk persists, can restart)${NC}"
     echo "Restart with: $0 gcp [attack-type]"
 }
+
 
 destruct_gcp_infrastructure() {
     echo -e "${RED}⚠️  COMPLETELY REMOVING GCP INFRASTRUCTURE${NC}"
